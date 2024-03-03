@@ -1,0 +1,53 @@
+section {
+  margin-top: 30px;
+}
+.loader {
+  display: none;
+}
+
+.loading .loader {
+  display: block;
+}
+.sidebar h4:first-child {
+  margin-top: 0;
+}
+
+.accordion {
+  margin-bottom: 0;
+}
+
+.exec {
+  font-style: italic;
+  color: #999;
+  font-weight: normal !important;
+}
+
+.exec.implemented {
+  font-style: normal;
+  font-weight: bolder !important;
+  color: green;
+}
+
+.impl_info {
+  float: right;
+}
+
+.accordion-heading {
+  position: relative;
+}
+
+.wont:not(.exec) {
+  opacity: 0.5
+}
+
+.wont .accordion-heading, .wont .exec, .exec.wont {
+  text-decoration: line-through;
+}
+
+.wont .accordion-heading {
+  background-color: #fff;
+}
+
+.hide {
+  display: none;
+}

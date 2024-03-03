@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="Plain GnuPG (GPG) with MailMate" />
+<meta name="dcterms.date" content="2018-10-19 00:00:00 +0200" />
+<title>Plain GnuPG (GPG) with MailMate</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2018-10-19 00:00:00 +0200">October 19, 2018</time>
+<h1>Plain GnuPG (GPG) with MailMate</h1>
+<p>To use OpenPGP encryption, <a href="https://freron.com/">MailMate</a> officially expects
+<a href="https://gpgtools.org/">MacGPG/gpgtools</a> to be installed.</p>
+<p>It&#8217;s possible to make MailMate with <a href="https://gnupg.org/"><code class="language-plaintext highlighter-rouge">gnupg</code></a> though, we
+just have to link <code class="language-plaintext highlighter-rouge">gnupg</code> to the location MailMate expects to find the
+executable. We also have to provide a non-cli way for MailMate to request the
+user&#8217;s password:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>brew <span class="nb">install </span>gnupg pinentry-mac
+<span class="nv">$ </span><span class="nb">sudo mkdir</span> <span class="nt">-p</span> /usr/local/MacGPG2/bin/
+<span class="nv">$ </span><span class="nb">sudo ln</span> <span class="nt">-s</span> /usr/local/bin/gpg /usr/local/MacGPG2/bin/gpg2
+</code></pre></div></div>
+<p>Then edit <code class="language-plaintext highlighter-rouge">~/.gnupg/gpg-agent.conf</code> to include:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pinentry-program /usr/local/bin/pinentry-mac
+</code></pre></div></div><hr/>
+<p><strong>Reference:</strong> <a href="https://www.mail-archive.com/mailmate@lists.freron.com/msg04851.html">https://www.mail-archive.com/<span class="__cf_email__" data-cfemail="7f121e1613121e0b1a3f13160c0b0c51190d1a0d1011511c1012">[email&#160;protected]</span>/msg04851.html</a></p>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="../2012/setting-up-geocouch-with-couchdb-and-homebrew.html">&larr; Setting up GeoCouch with CouchDB and Homebrew</a>
+<a style="float: right" href="ansible-openbsd.html">How to manage OpenBSD with Ansible &rarr;</a>
+</p>
+</footer>
+<script data-cfasync="false" src="../../cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+</html>

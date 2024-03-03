@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="Inspecting variables in JavaScript consoles - Timing is important" />
+<meta name="dcterms.date" content="2011-08-18 00:00:00 +0200" />
+<title>Inspecting variables in JavaScript consoles - Timing is important</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2011-08-18 00:00:00 +0200">August 18, 2011</time>
+<h1>Inspecting variables in JavaScript consoles - Timing is important</h1>
+<p>Already a while back, there was an interesting question on Stack Overflow
+(I will link to it if I find it).</p>
+<p>It was about logging objects which got populated by an Ajax callback.
+Now we all know that the code that immediately follows the Ajax call is
+executed <strong>before</strong> the response callback is executed:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Using jQuery only as example</span>
+<span class="kd">var</span> <span class="nx">obj</span> <span class="o">=</span> <span class="p">{};</span>                     <span class="c1">// 1</span>
+<span class="nx">$</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">/some/url</span><span class="dl">'</span><span class="p">,</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>   <span class="c1">// 2</span>
+    <span class="nx">obj</span><span class="p">.</span><span class="nx">foo</span> <span class="o">=</span> <span class="dl">'</span><span class="s1">bar</span><span class="dl">'</span><span class="p">;</span>              <span class="c1">// 5</span>
+<span class="p">});</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span>                 <span class="c1">// 3</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">obj</span><span class="p">.</span><span class="nx">foo</span><span class="p">);</span>             <span class="c1">// 4</span>
+</code></pre></div></div>
+<p>The questioner&#8217;s problem was that the output from the line marked with <code class="language-plaintext highlighter-rouge">4</code> was
+<code class="language-plaintext highlighter-rouge">undefined</code> but the object logged one line before clearly showed that it
+has the property <code class="language-plaintext highlighter-rouge">foo</code>.</p>
+<h2 id="what-is-going-on-here">
+What is going on here? <a href="inspecting-variables-in-javascript-consoles.html#what-is-going-on-here">#</a>
+</h2>
+<p>The problem was that the console does not actually show the whole object, but
+only a line with a handle to inspect it further, something like this
+(the pictures are showing the Chrome console) :</p>
+<p><img src="../../images/console_1.png" alt="Console 1" /></p>
+<p>Only <strong>after</strong> clicking the arrow, you can see the object&#8217;s structure:</p>
+<p><img src="../../images/console_2.png" alt="Console 2" /></p>
+<p>This made me think and a small experiment confirmed my assumption:</p>
+<p>When you click on the handle, it does not show the content of the object
+at the time when it was logged, but the content it has <em>now</em>.</p>
+<p>You can try it yourself (this is even more mysterious as FireBug shows
+the current content immediately):</p>
+<iframe style="width: 100%; height: 300px" src="https://jsfiddle.net/fkling/9SE7r/embedded/result,js">&nbsp;</iframe>
+<p>Back to the Ajax situation: The questioners problem was that at time he clicked the handle
+to inspect the contents, the Ajax call already returned, giving him the impression that he
+actually has access to the properties in the code following the call.</p>
+<p>What do we learn from that? Don&#8217;t trust every output :)</p>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="geset-object-in-collections.html">&larr; Getset objects in collections</a>
+<a style="float: right" href="relationship-in-the-dom.html">Relationship between nodes in the DOM &rarr;</a>
+</p>
+</footer>
+</body>
+</html>

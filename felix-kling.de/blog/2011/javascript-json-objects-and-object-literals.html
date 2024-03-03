@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="Javascript Json Objects And Object Literals" />
+<meta name="dcterms.date" content="2011-01-12 00:00:00 +0100" />
+<title>Javascript Json Objects And Object Literals</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2011-01-12 00:00:00 +0100">January 12, 2011</time>
+<h1>Javascript Json Objects And Object Literals</h1>
+<h1 id="javascript-json-objects-and-object-literals">
+JavaScript, JSON objects and object literals <a href="javascript-json-objects-and-object-literals.html#javascript-json-objects-and-object-literals">#</a>
+</h1>
+<p>This is my crusade against the inconsiderate usage of the term <em>JSON object</em> in the context of JavaScript.</p>
+<h2 id="json-and-json-objects">
+JSON and JSON objects <a href="javascript-json-objects-and-object-literals.html#json-and-json-objects">#</a>
+</h2>
+<p>JSON objects are <a href="http://json.org/">defined</a> as follows:</p>
+<p><img src="../../images/json_object.png" alt="JSON object" /></p>
+<p>Where <code class="language-plaintext highlighter-rouge">value</code> can be:</p>
+<ul>
+<li>a string (<code class="language-plaintext highlighter-rouge">"string"</code>)</li>
+<li>a number (<code class="language-plaintext highlighter-rouge">42</code>)</li>
+<li>another object (<code class="language-plaintext highlighter-rouge">{"key": ...}</code>)</li>
+<li>an array (<code class="language-plaintext highlighter-rouge">[42, "string", {...}, ...]</code>)</li>
+<li><code class="language-plaintext highlighter-rouge">true</code></li>
+<li><code class="language-plaintext highlighter-rouge">false</code></li>
+<li><code class="language-plaintext highlighter-rouge">null</code></li>
+</ul>
+<p>So this is a valid JSON string with a JSON object:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="dl">"</span><span class="s2">foo</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">bar</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">baz</span><span class="dl">"</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+</code></pre></div></div>
+<h2 id="object-literals-in-javascript">
+Object literals in JavaScript <a href="javascript-json-objects-and-object-literals.html#object-literals-in-javascript">#</a>
+</h2>
+<p>Some people think, the <a href="https://developer.mozilla.org/en/Core_JavaScript_1.5_Guide/Core_Language_Features#Object_Literals">object literals</a>
+in JavaScript and JSON objects are the same and use the latter to describe the former.
+But that is wrong. The syntax for JSON objects is just a <em>subset</em> of the possible syntax for JavaScript
+objects. The object literal notation was just the model for JSON.</p>
+<p>This is <strong>not</strong> a JSON object:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">foo</span> <span class="o">=</span>  <span class="p">{</span><span class="na">foo</span><span class="p">:</span> <span class="dl">"</span><span class="s2">bar</span><span class="dl">"</span><span class="p">,</span> <span class="na">baz</span><span class="p">:</span> <span class="mi">0</span><span class="p">};</span>
+</code></pre></div></div>
+<p>It is an object literal. It would be only valid to talk about a JSON object in this case:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">foo</span> <span class="o">=</span> <span class="dl">'</span><span class="s1">{"foo": "bar", "baz": 0}</span><span class="dl">'</span><span class="p">;</span>
+</code></pre></div></div>
+<p>because now here we have a <strong>string</strong> that contains JSON and a JSON object.</p>
+<h2 id="the-json-object-in-javascript">
+The JSON object in JavaScript <a href="javascript-json-objects-and-object-literals.html#the-json-object-in-javascript">#</a>
+</h2>
+<p>Using the term JSON object for object literal notation seems to be even more wrong considering that
+<em>there actually exists a JSON object in JavaScript</em>. At least in the newer browsers. It is an object,
+available via the global variable <a href="https://developer.mozilla.org/en/json"><code class="language-plaintext highlighter-rouge">JSON</code></a> and provides the methods</p>
+<ul>
+<li><code class="language-plaintext highlighter-rouge">JSON.parse</code> to decode JSON data into JavaScript objects</li>
+<li><code class="language-plaintext highlighter-rouge">JSON.stringify</code> to encode JavaScript values (primitive values, arrays and objects)
+into JSON data (if possible)</li>
+</ul>
+<h2 id="conclusion">
+Conclusion <a href="javascript-json-objects-and-object-literals.html#conclusion">#</a>
+</h2>
+<p>Don&#8217;t use the term <em>JSON object</em> to describe JavaScript objects defined with <em>object literal notation</em>.
+It is misleading and confusing.</p><hr/>
+<h2 id="further-information">
+Further information: <a href="javascript-json-objects-and-object-literals.html#further-information">#</a>
+</h2>
+<ul>
+<li><a href="http://benalman.com/news/2010/03/theres-no-such-thing-as-a-json/">There&#8217;s no such thing as a &#8220;JSON Object&#8221;</a></li>
+</ul>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="php-and-jsonp.html">&larr; PHP and JSONP</a>
+<a style="float: right" href="how-to-write-good-code.html">How to write good code &rarr;</a>
+</p>
+</footer>
+</body>
+</html>

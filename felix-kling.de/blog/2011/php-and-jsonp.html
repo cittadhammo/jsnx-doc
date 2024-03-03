@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="PHP and JSONP" />
+<meta name="dcterms.date" content="2011-01-11 00:00:00 +0100" />
+<title>PHP and JSONP</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2011-01-11 00:00:00 +0100">January 11, 2011</time>
+<h1>PHP and JSONP</h1>
+<p>Since PHP 5.2, with
+<a href="http://www.php.net/manual/en/function.json-decode.php"><code class="language-plaintext highlighter-rouge">json_decode</code></a>
+we have an easy way to decode <a href="http://json.org/">JSON</a> data. But sometimes, the
+only data we can get is actually
+<a href="https://en.wikipedia.org/wiki/JSON#JSONP">JSONP</a>, which is JSON data wrapped in
+a function call like:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">callback</span><span class="p">({</span><span class="cm">/*.. JSON data .. */</span><span class="p">});</span>
+</code></pre></div></div>
+<p>It is not difficult to use some string functions to remove this &#8220;overhead&#8221;. Here is an example
+implementation of <code class="language-plaintext highlighter-rouge">jsonp_decode</code> (which offers the same interface as <code class="language-plaintext highlighter-rouge">json_decode</code>):</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function</span> <span class="n">jsonp_decode</span><span class="p">(</span><span class="nv">$jsonp</span><span class="p">,</span> <span class="nv">$assoc</span> <span class="o">=</span> <span class="kc">false</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// PHP 5.3 adds "depth" as third parameter to json_decode</span>
+    <span class="k">if</span><span class="p">(</span><span class="nv">$jsonp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!==</span> <span class="s1">'['</span> <span class="o">&amp;&amp;</span> <span class="nv">$jsonp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!==</span> <span class="s1">'{'</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// we have JSONP</span>
+        <span class="nv">$jsonp</span> <span class="o">=</span> <span class="nb">substr</span><span class="p">(</span><span class="nv">$jsonp</span><span class="p">,</span> <span class="nb">strpos</span><span class="p">(</span><span class="nv">$jsonp</span><span class="p">,</span> <span class="s1">'('</span><span class="p">));</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nb">json_decode</span><span class="p">(</span><span class="nb">trim</span><span class="p">(</span><span class="nv">$jsonp</span><span class="p">,</span><span class="s1">'();'</span><span class="p">),</span> <span class="nv">$assoc</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>And example implementation for creating a JSONP string:</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function</span> <span class="n">jsonp_encode</span><span class="p">(</span><span class="nv">$value</span><span class="p">,</span> <span class="nv">$function_name</span> <span class="o">=</span> <span class="s1">'cb'</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// 5.3 adds "options" as second parameter to json_encode</span>
+    <span class="k">return</span> <span class="nb">sprintf</span><span class="p">(</span>
+        <span class="s1">'%s(%s);'</span><span class="p">,</span>
+        <span class="nb">trim</span><span class="p">(</span><span class="nv">$function_name</span><span class="p">,</span> <span class="s1">'();'</span><span class="p">),</span>
+        <span class="nb">json_encode</span><span class="p">(</span><span class="nv">$value</span><span class="p">)</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div><hr/>
+<p><strong>Update:</strong></p>
+<p>The code is now <a href="https://github.com/fkling/PHP-functions">available on GitHub</a>.</p>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="javascript-about-loops-functions-closures.html">&larr; JavaScript: About loops, functions and closures</a>
+<a style="float: right" href="javascript-json-objects-and-object-literals.html">Javascript Json Objects And Object Literals &rarr;</a>
+</p>
+</footer>
+</body>
+</html>

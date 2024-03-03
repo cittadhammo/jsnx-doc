@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="Logwatch filter for Bogofilter" />
+<meta name="dcterms.date" content="2019-07-16 00:00:00 +0200" />
+<title>Logwatch filter for Bogofilter</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2019-07-16 00:00:00 +0200">July 16, 2019</time>
+<h1>Logwatch filter for Bogofilter</h1>
+<p>I recently setup my own email server and use
+<a href="http://bogofilter.sourceforge.net/">bogofilter</a> for spam classification. I
+also use <a href="https://sourceforge.net/projects/logwatch/">logwatch</a> to monitor my
+server. Previously I was using <a href="https://spamassassin.apache.org/">spamassassin</a>
+for another email setup and I liked how logwatch would show me how many emails
+spamassassin classified as spam or ham. I wanted the same for bogofilter but
+logwatch doesn&#8217;t support it out of the box, at least not the version I was
+using.</p>
+<p>However, adding custom log filters is quite easy. There might be a better or
+more correct way to do it but the following worked for me.</p>
+<h2 id="the-log-file">
+The log file <a href="logwatch-bogofilter.html#the-log-file">#</a>
+</h2>
+<p>I&#8217;m running Debian on my server and bogofilter logs information about
+classifying emails as well as training spam and ham to <code class="language-plaintext highlighter-rouge">/var/log/mail.log</code>.<br/>
+Here are some examples (date and host name omitted).</p>
+<p>Classification:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>bogofilter[10295]: X-Bogosity: Ham, spamicity=0.0000, version=1.2.4
+bogofilter[10453]: X-Bogosity: Unsure, spamicity=0.9837, version=1.2.4
+bogofilter[10617]: X-Bogosity: Spam, spamicity=1.0000, version=1.2.4
+</code></pre></div></div>
+<p>Training:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>bogofilter[23768]: register-n, 1550 words, 1 messages
+bogofilter[11794]: register-s, 874 words, 1 messages
+</code></pre></div></div>
+<p><code class="language-plaintext highlighter-rouge">register-n</code> means that the message was learned as ham.</p>
+<h2 id="logwatch-script-and-configuration">
+Logwatch script and configuration <a href="logwatch-bogofilter.html#logwatch-script-and-configuration">#</a>
+</h2>
+<p>Custom logwatch filters can be added to <code class="language-plaintext highlighter-rouge">/etc/logwatch/conf/services/</code> and
+<code class="language-plaintext highlighter-rouge">/etc/logwatch/scripts/services/</code> (paths might be different in other
+distributions). By default logwatch uses all filters, so there is nothing else
+that needs to be setup besides a configuration file for our new filter and the
+filter script itself.</p>
+<p>Since this is a very simple script with no options, the configuration file just
+provides the name the filter and which logfile to analyze:</p>
+<pre><code class="language-txt"># /etc/logwatch/conf/services/bogofilter.conf
+Title = "Bogofilter"
+LogFile = maillog
+</code></pre>
+<p><code class="language-plaintext highlighter-rouge">maillog</code> is defined somehow and somewhere else. I found out about this by
+looking at existing email related filters.</p>
+<p>logwatch will provide the log file via standard input to our filter. Most
+built-in filters are written in perl, but since I don&#8217;t know perl and since the
+language doesn&#8217;t seem to matter, I wrote a shell script utilizing <code class="language-plaintext highlighter-rouge">awk</code>
+instead:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># /etc/logwatch/services/bogofilter</span>
+<span class="c">#!/bin/bash</span>
+
+<span class="nb">awk</span> <span class="s1">'
+  !/bogofilter/ { next; }
+
+  /X-Bogosity: Ham,/ {
+    Ham += 1
+  }
+  /X-Bogosity: Spam,/ {
+    Spam += 1
+  }
+  /X-Bogosity: Unsure,/ {
+    Unsure += 1
+  }
+
+  /register-s/ {
+    if (match($0, /[0-9][0-9]* messages/) != 0) {
+      split(substr($0, RSTART, RLENGTH), parts, " ")
+      SpamLearned += parts[1]
+    }
+  }
+
+  /register-n/ {
+    if (match($0, /[0-9][0-9]* messages/) != 0) {
+      split(substr($0, RSTART, RLENGTH), parts, " ")
+      HamLearned += parts[1]
+    }
+  }
+
+  END {
+    if (Ham + Spam + Unsure &gt; 0) {
+      printf "Total Messages: %d\n", Ham + Spam + Unsure
+      printf "  Ham: %d\n", Ham
+      printf "  Spam: %d\n", Spam
+      printf "  Unsure: %d\n\n", Unsure
+    }
+
+    printf "Learned as spam: %d\n", SpamLearned
+    printf "Learned as ham: %d\n", HamLearned
+  }
+'</span>
+</code></pre></div></div>
+<p>This simple counts the number of spams, hams, unsures, and learnings, and
+prints a summary that looks like this:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code> Total Messages: 32
+   Ham: 21
+   Spam: 2
+   Unsure: 9
+
+ Learned as spam: 2
+ Learned as ham: 0
+</code></pre></div></div>
+<p>Built-in scripts are more complex since they often support options and print
+different output depending on the configured level of detail. But this script
+was all I needed.</p>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="javascript-callbacks-misconceptions.html">&larr; JavaScript: How (not) to get a value "out of" a callback</a>
+<a style="float: right" href="../2020/custom-github-pages-redirect.html">Custom GitHub pages redirect with nginx &rarr;</a>
+</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JavaScript loose comparison (==) step by step</title>
+<meta name="author" content="Felix Kling">
+<meta name="description" content="An interactive demonstration how loose comparison (==) works in JavaScript">
+<meta name="keywords" content="javascrip,comparison,loose,js">
+<link rel="shortcut icon" href="../favicon.ico" type="image/vnd.microsoft.icon">
+<link rel="stylesheet" href="../css/page.css" type="text/css">
+<link rel="stylesheet" href="style.css" type="text/css">
+<script src="https://unpkg.com/react@16/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js" crossorigin></script>
+</head>
+<body>
+<h1>JavaScript "loose" comparison step by step</h1>
+<p>
+When you start learning JavaScript, you will likely read about preferring to use
+<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Comparison_Operators#Identity"><code>===</code></a> over
+<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Comparison_Operators#Equality"><code>==</code></a> to compare values.
+</p>
+<p>
+<em>But why?</em>
+</p>
+<p>
+<code>==</code> performs
+<a href="https://en.wikipedia.org/wiki/Type_conversion">type conversion</a>:
+If the two values are not of the same <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Data_types">data type</a>, they are converted to the same type first.
+While this seems, and can be, convenient, this process is not necessarily intuitive.
+</p>
+<p>
+Below you can provide two values to compare, and see which steps of the
+<em>"Abstract Equality Algorithm"</em> as defined in <a href="https://www.ecma-international.org/ecma-262/9.0/#sec-abstract-equality-comparison">Section 7.2.14 of the ECMAScript specification</a> are executed.
+</p>
+<hr/>
+<div id="container"></div>
+<script src="comparison.js"></script>
+</body>
+</html>

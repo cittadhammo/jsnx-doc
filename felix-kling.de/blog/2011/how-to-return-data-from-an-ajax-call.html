@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="How to return data from an Ajax call?" />
+<meta name="dcterms.date" content="2011-01-14 00:00:00 +0100" />
+<title>How to return data from an Ajax call?</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2011-01-14 00:00:00 +0100">January 14, 2011</time>
+<h1>How to return data from an Ajax call?</h1>
+<p>That is another question that is frequently asked on <a href="http://stackoverflow.com/questions/5316697/jquery-return-data-after-ajax-call-success">stackoverflow.com</a>.</p>
+<p><strong>The short answer:</strong> You can&#8217;t (if you don&#8217;t want to give the benefits of Ajax a miss).</p>
+<h2 id="ajax">
+Ajax <a href="how-to-return-data-from-an-ajax-call.html#ajax">#</a>
+</h2>
+<p>What does <a href="https://en.wikipedia.org/wiki/Ajax_(programming)">Ajax</a> stand for?
+It stands for <em>Asynchronous JavaScript And XML</em> and the important word here is <strong>asynchronous</strong>.</p>
+<p>Fetching the data from the server is not done in the normal program control flow, but parallel to it.</p>
+<p>That is why, in one way or another, you specify a <strong>callback</strong> that handles the response from the server
+when it is available.</p>
+<h2 id="callbacks">
+Callbacks? <a href="how-to-return-data-from-an-ajax-call.html#callbacks">#</a>
+</h2>
+<p>One could say the philosophy about <a href="https://en.wikipedia.org/wiki/Callbacks">callbacks</a> is:
+<em>Don&#8217;t call us, we call you</em>. You are not waiting for a function to return a value, but you provide
+another function that gets called as soon as this value is available.</p>
+<p>So instead of doing</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">val</span> <span class="o">=</span> <span class="nx">foo</span><span class="p">();</span>
+<span class="c1">// do some processing with val here</span>
+</code></pre></div></div>
+<p>you do</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">callback</span><span class="p">(</span><span class="nx">val</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// do some processing with val here</span>
+<span class="p">}</span>
+
+<span class="nx">foo</span><span class="p">(</span><span class="nx">callback</span><span class="p">);</span>
+</code></pre></div></div>
+<p>This might change your the control flow and it can be tricky to convert non-callback code to callback,
+but it is quite powerful too. Typically, one would put all the code that has to process <code class="language-plaintext highlighter-rouge">val</code> into the
+callback.</p>
+<h2 id="getting-ajax-into-the-game">
+Getting Ajax into the game <a href="how-to-return-data-from-an-ajax-call.html#getting-ajax-into-the-game">#</a>
+</h2>
+<p>Here is a telephone analogy: Imagine you are calling one of your colleagues (friends, fellow students, &#8230;)
+and ask him to do a job for you that takes some time (let&#8217;s say picking something up from somewhere). Now
+what would you do? Would you <em>wait on the phone</em> until the other person returns (e.g. waiting for an hour)?
+Or would you rather say: &#8220;Ey, know what? <em>Call me back</em> when you have my stuff. (Here is my number:&#8230;)&#8221;?</p>
+<p>Some people seem to think that JavaScript is waiting for the call to finish (waiting on the phone)
+and wonder why code like</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">foo</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">result</span><span class="p">;</span>
+   <span class="nx">$</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="dl">"</span><span class="s2">&lt;some url&gt;</span><span class="dl">"</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+       <span class="nx">result</span> <span class="o">=</span> <span class="nx">data</span><span class="p">;</span>
+   <span class="p">});</span>
+   <span class="k">return</span> <span class="nx">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kd">var</span> <span class="nx">val</span> <span class="o">=</span> <span class="nx">foo</span><span class="p">();</span>
+<span class="c1">// do some processing with val here</span>
+</code></pre></div></div>
+<p>does <strong>not</strong> work (I&#8217;m using <a href="http://jquery.com">jQuery</a> in this example, <code class="language-plaintext highlighter-rouge">$.get()</code> just makes an
+GET Ajax request to <code class="language-plaintext highlighter-rouge">&lt;some url&gt;</code> and executes the callback passed as second parameter).</p>
+<p>It is because JavaScript <strong>does not wait</strong> until the Ajax request is finished. When the function is
+called, it will call <code class="language-plaintext highlighter-rouge">$.get()</code>, which will setup and send the Ajax request, but returns <em>immediately</em>.
+Then the function <code class="language-plaintext highlighter-rouge">foo</code> returns, <em>before</em> the callback passed to <code class="language-plaintext highlighter-rouge">$.get()</code> is even called. I.e. the
+assignment <code class="language-plaintext highlighter-rouge">result = data;</code> was not executed yet and the function returns <code class="language-plaintext highlighter-rouge">undefined</code>.</p>
+<p>In order to fix this, all the logic that should operate with <code class="language-plaintext highlighter-rouge">val</code> has to be put into the callback:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">foo</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span> 
+    <span class="nx">$</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="dl">"</span><span class="s2">&lt;some url&gt;</span><span class="dl">"</span><span class="p">,</span> <span class="nx">callback</span><span class="p">);</span> 
+<span class="p">}</span>
+
+<span class="nx">foo</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">val</span><span class="p">){</span>
+    <span class="c1">// do some processing with val here</span>
+<span class="p">});</span>
+</code></pre></div></div>
+<h2 id="to-be-fair">
+To be fair <a href="how-to-return-data-from-an-ajax-call.html#to-be-fair">#</a>
+</h2>
+<p>There is a way to make the previously not-working code work. Ajax requests can be set up to be <em>not</em>
+asynchronous (is it a Jax request then? Or Sjax?). I.e. the execution will halt and continue once the
+response from the server was received.<br/>
+That said, this should be avoided by all means (there might be some edge cases where it is ok but it is
+not the normal case). One of the big advantages of Ajax <em>is</em> the asynchronicity. Depending on how long
+it takes to get the response, using a synchronous request might freeze the user interface and you gain
+nothing but annoyed users.</p>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="how-to-write-good-code.html">&larr; How to write good code</a>
+<a style="float: right" href="jQuery-Function-Toggle-plugin.html">jQuery Function Toggle Plugin &rarr;</a>
+</p>
+</footer>
+</body>
+</html>

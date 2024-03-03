@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="Setting up GeoCouch with CouchDB and Homebrew" />
+<meta name="dcterms.date" content="2012-02-01 00:00:00 +0100" />
+<title>Setting up GeoCouch with CouchDB and Homebrew</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2012-02-01 00:00:00 +0100">February 01, 2012</time>
+<h1>Setting up GeoCouch with CouchDB and Homebrew</h1>
+<p>Installing <a href="http://couchdb.apache.org/">CouchDB</a> with <a href="https://github.com/mxcl/homebrew">Homebrew</a> is pretty straightforward:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>brew <span class="nb">install </span>couchdb
+</code></pre></div></div>
+<p>The instructions for installing GeoCouch are easy to follow as well, but due Homebrew, the files have to be copied to different folders. I also noticed that the URL to clone the repository from is not correct in the README file.</p>
+<p><strong>Get GeoCouch</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/couchbase/geocouch.git
+<span class="nb">cd </span>geocouch
+git checkout couchdb1.1.x <span class="c"># choose the correct branch for your version</span>
+</code></pre></div></div>
+<p><strong>Get CouchDB source</strong></p>
+<p>from <a href="http://couchdb.apache.org/downloads.html">apache CouchDB</a> and set <code class="language-plaintext highlighter-rouge">COUCH_SRC</code> to the directory containing the source, e.g.:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">COUCH_SRC</span><span class="o">=</span>/path/to/source/src/couchdb
+</code></pre></div></div>
+<p><strong>Installation</strong></p>
+<p>Run <code class="language-plaintext highlighter-rouge">make</code> in the directory</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>make
+</code></pre></div></div>
+<p>Copy the configuration file for GeoCouch from <code class="language-plaintext highlighter-rouge">etc/couchdb/local.d/</code> to <code class="language-plaintext highlighter-rouge">/usr/local/etc/couchdb/local.d/</code></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cp </span>etc/couchdb/local.d/geocouch.ini /usr/local/etc/couchdb/local.d/
+</code></pre></div></div>
+<p><strong>Futon tests</strong></p>
+<p>To make sure your installation is working also copy the Futon tests over (from <code class="language-plaintext highlighter-rouge">share/www/script/test</code> to <code class="language-plaintext highlighter-rouge">/usr/local/share/couchdb/www/script/test</code>):</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cp </span>share/www/script/test/<span class="k">*</span> /usr/local/share/couchdb/www/script/test/
+</code></pre></div></div>
+<p>Add the tests to <code class="language-plaintext highlighter-rouge">/usr/local/share/couchdb/www/script/couch_tests.js</code></p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">loadTest</span><span class="p">(</span><span class="dl">"</span><span class="s2">spatial.js</span><span class="dl">"</span><span class="p">);</span>
+<span class="nx">loadTest</span><span class="p">(</span><span class="dl">"</span><span class="s2">list_spatial.js</span><span class="dl">"</span><span class="p">);</span>
+<span class="nx">loadTest</span><span class="p">(</span><span class="dl">"</span><span class="s2">etags_spatial.js</span><span class="dl">"</span><span class="p">);</span>
+<span class="nx">loadTest</span><span class="p">(</span><span class="dl">"</span><span class="s2">multiple_spatial_rows.js</span><span class="dl">"</span><span class="p">);</span>
+<span class="nx">loadTest</span><span class="p">(</span><span class="dl">"</span><span class="s2">spatial_compaction.js</span><span class="dl">"</span><span class="p">);</span>
+<span class="nx">loadTest</span><span class="p">(</span><span class="dl">"</span><span class="s2">spatial_design_docs.js</span><span class="dl">"</span><span class="p">);</span>
+<span class="nx">loadTest</span><span class="p">(</span><span class="dl">"</span><span class="s2">spatial_bugfixes.js</span><span class="dl">"</span><span class="p">);</span>
+</code></pre></div></div>
+<p><strong>Follow the remaining instructions in the official README file.</strong></p>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="../2011/relationship-in-the-dom.html">&larr; Relationship between nodes in the DOM</a>
+<a style="float: right" href="../2018/gnupg-with-mailmate.html">Plain GnuPG (GPG) with MailMate &rarr;</a>
+</p>
+</footer>
+</body>
+</html>

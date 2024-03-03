@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="Fixing jQuery's Opacity in Firefox Extensions" />
+<meta name="dcterms.date" content="2010-04-18 00:00:00 +0200" />
+<title>Fixing jQuery's Opacity in Firefox Extensions</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2010-04-18 00:00:00 +0200">April 18, 2010</time>
+<h1>Fixing jQuery's Opacity in Firefox Extensions</h1>
+<h3 id="update-19072012">
+Update (19.07.2012) <a href="fixing-jquerys-opacity-in-firefox-extensions.html#update-19072012">#</a>
+</h3>
+<p>The solution below does not seem to work anymore since jQuery 1.7. <a href="http://stackoverflow.com/questions/693174/is-it-possible-to-use-jquery-to-manipulate-xul-elements/9071148#9071148">This
+Stack Overflow answer</a> seems to provide a working solution.</p><hr/>
+<p>There is some <a href="http://stackoverflow.com/questions/491490/how-to-use-jquery-in-firefox-extension">information</a> , <a href="http://forum.jquery.com/topic/jquery-1-4-2-inside-a-firefox-extension">more</a> or <a href="http://gluei.com/blog/view/using-jquery-inside-your-firefox-extension">less</a> elaborated, about how to integrate <a href="http://jquery.com">jQuery</a> in your own Firefox extension.</p>
+<p>I managed to get it working too, but I recognized one problem: I was not able to set the opacity of an element via <code class="language-plaintext highlighter-rouge">$(el).css('opacity', 0.5)</code> nor did the effects like <code class="language-plaintext highlighter-rouge">.fadeIn()</code> or <code class="language-plaintext highlighter-rouge">.fadeOut()</code> work.<br/>
+It took some time for me to figure it out (couldn&#8217;t find anything on the web about it):</p>
+<p>When jQuery loads, it checks, which features are supported by the browser. It seems that the check for opacity fails due the fact, that jQuery runs in another context. <br/>
+If it is loaded via an overlay for the browser</p>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;overlay</span> <span class="na">id=</span><span class="s">"extensionID"</span> <span class="na">xmlns=</span><span class="s">"http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"</span><span class="nt">&gt;</span>
+    <span class="c">&lt;!-- whatever here... --&gt;</span>
+    <span class="nt">&lt;script</span> <span class="na">type=</span><span class="s">"text/javascript"</span> <span class="na">src=</span><span class="s">"chrome://extension/content/jquery.js"</span> <span class="nt">/&gt;</span>
+<span class="nt">&lt;/overlay&gt;</span>
+</code></pre></div></div>
+<p><code class="language-plaintext highlighter-rouge">window</code> is not pointing to the top element of the current page but to the whole browser window. This seems to make at least the <em>opacity</em> test fail</p>
+<p>In order to manipulate the current HTML document with jQuery from your extension and to get opacity working, you have to keep two things in mind:</p>
+<ol>
+<li>Before you use jQuery in your extension, set
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">jQuery</span><span class="p">.</span><span class="nx">supported</span><span class="p">.</span><span class="nx">opacity</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+</code></pre></div> </div>
+</li>
+<li>Provide the correct context to jQuery when accessing elements from the
+current website. The <code class="language-plaintext highlighter-rouge">document</code> element of the focused website is accessible
+via <code class="language-plaintext highlighter-rouge">window.content.document</code>. Thus, to select an element with ID <code class="language-plaintext highlighter-rouge">foo</code>, you
+have to do
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">#foo</span><span class="dl">'</span><span class="p">,</span> <span class="nb">window</span><span class="p">.</span><span class="nx">content</span><span class="p">.</span><span class="nb">document</span><span class="p">)</span>
+</code></pre></div> </div>
+</li>
+</ol>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a style="float: right" href="history-of-the-internet.html">History of the Internet (video) &rarr;</a>
+</p>
+</footer>
+</body>
+</html>

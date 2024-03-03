@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="Getset objects in collections" />
+<meta name="dcterms.date" content="2011-07-19 00:00:00 +0200" />
+<title>Getset objects in collections</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2011-07-19 00:00:00 +0200">July 19, 2011</time>
+<h1>Getset objects in collections</h1>
+<p>Quite often you find yourself in a situation where you have to an object to a collection
+or change a certain property. The &#8220;normal&#8221; is to test via an <code class="language-plaintext highlighter-rouge">if</code> statement whether the
+object exists or not:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">obj</span> <span class="o">=</span> <span class="nx">collection</span><span class="p">[</span><span class="nx">someId</span><span class="p">];</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="nx">obj</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">obj</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="nx">collection</span><span class="p">[</span><span class="nx">someId</span><span class="p">]</span> <span class="o">=</span> <span class="nx">obj</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="c1">// do something with object</span>
+</code></pre></div></div>
+<p>This works, is readable, but can be annoying if you have to do this often.</p>
+<p>The shorthand syntax for setting a default value for, lets say, a parameter is probably
+well known:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">param</span> <span class="o">=</span> <span class="nx">param</span> <span class="o">||</span> <span class="dl">'</span><span class="s1">default</span><span class="dl">'</span><span class="p">;</span>
+</code></pre></div></div>
+<p>Can we use this somehow in this situation too? Yes we can. &#8220;Luckily&#8221;, the assignment operation
+<em>returns</em> the value that was assigned to a variable:</p>
+<blockquote>
+<p><strong><a href="http://ecma262-5.com/ELS5_HTML.htm#Section_11.13.1">11.13.1 Simple Assignment ( = )</a></strong></p>
+<p>The production <em>AssignmentExpression : LeftHandSideExpression = AssignmentExpression</em> is evaluated as follows:</p>
+<ol>
+<li>Let <em>lref</em> be the result of evaluating <em>LeftHandSideExpression</em>.</li>
+<li>Let <em>rref</em> be the result of evaluating <em>AssignmentExpression</em>.</li>
+<li>Let <em>rval</em> be GetValue(<em>rref</em>).</li>
+<li>
+<p>Throw a <strong>SyntaxError</strong> exception if the following conditions are all true:</p>
+<ul>
+<li>Type(<em>lref</em>) is Reference is <strong>true</strong></li>
+<li>IsStrictReference(<em>lref</em>) is <strong>true</strong></li>
+<li>Type(GetBase(<em>lref</em>)) is Enviroment Record</li>
+<li>GetReferencedName(<em>lref</em>) is either &#8220;<strong><code class="language-plaintext highlighter-rouge">eval</code></strong>&#8221; or &#8220;<strong><code class="language-plaintext highlighter-rouge">arguments</code></strong>&#8221;</li>
+</ul>
+</li>
+<li>Call PutValue(<em>lref</em>, <em>rval</em>).
+6.Return <em>rval</em>.</li>
+</ol>
+</blockquote>
+<p><em>(Reference: <a href="http://ecma262-5.com/ELS5_HTML.htm">http://ecma262-5.com/ELS5_HTML.htm</a>)</em></p>
+<p>That means we can use this slightly less readable but much shorter version:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">obj</span> <span class="o">=</span> <span class="nx">collection</span><span class="p">[</span><span class="nx">someId</span><span class="p">]</span> <span class="o">||</span> <span class="p">(</span><span class="nx">collection</span><span class="p">[</span><span class="nx">someID</span><span class="p">]</span> <span class="o">=</span> <span class="p">{});</span>
+</code></pre></div></div>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="jQuery-Function-Toggle-plugin.html">&larr; jQuery Function Toggle Plugin</a>
+<a style="float: right" href="inspecting-variables-in-javascript-consoles.html">Inspecting variables in JavaScript consoles - Timing is important &rarr;</a>
+</p>
+</footer>
+</body>
+</html>

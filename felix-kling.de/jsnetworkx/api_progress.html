@@ -1,0 +1,273 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title> API porting progress | JSNetworkX</title>
+<link href="stylesheets/bootstrap.min.css" rel="stylesheet" media="screen">
+<link href="stylesheets/styles.css" rel="stylesheet" media="screen">
+<link href="stylesheets/bootstrap-responsive.min.css" rel="stylesheet">
+<!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+<script src="https://code.jquery.com/jquery.js"></script>
+<script src="javascripts/bootstrap.min.js"></script>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script src="javascripts/scale.fix.js"></script>
+<script src="javascripts/jsnetworkx.js"></script>
+<script>
+      jsnx.workerPath = 'javascripts/jsnetworkx.js';
+    </script>
+<link href="stylesheets/api.css" rel="stylesheet">
+</head>
+<body class="sub" data-spy="scroll" data-target=".sidebar">
+<div id="wrap">
+<div class="navbar navbar-fixed-top" data-spy="affix" data-offset-top="1">
+<div class="navbar-inner">
+<div class="container">
+<ul class="nav">
+<li class>
+<a href="index.html">Home</a>
+</li>
+<li class>
+<a href="getting_started.html">Getting started</a>
+</li>
+<li class>
+<a href="examples.html">Examples</a>
+</li>
+<li class>
+<a href="documentation.html">Documentation</a>
+</li>
+<li class=" active">
+<a href="api_progress.html">API progress</a>
+</li>
+</ul>
+<p class="navbar-text pull-right">
+<a href="https://github.com/fkling/JSNetworkX">
+Fork me on <strong>GitHub</strong>
+</a>
+</p>
+</div>
+</div>
+</div>
+<div id="header">
+<div id="header-chart"></div>
+<div class="container ">
+<h1> API porting progress </h1>
+</div>
+</div>
+<div class="container">
+<div class="row">
+<div class="span3 sidebar">
+<div class="sidenav" style="padding: 0 15px" data-spy="affix" data-offset-top="140">
+<h4>View</h4>
+<div class="btn-group" data-toggle="buttons-radio" id="filter">
+<button id="filter-all" type="button" class="btn active">All</button>
+<button id="filter-available" type="button" class="btn">Available</button>
+</div>
+<h4>Legend</h4>
+<dl>
+<dt class="exec implemented">Name</dt>
+<dd>Implemented</dd>
+<dt class="exec">Name</dt>
+<dd>Not implemented</dd>
+<dt class="exec wont">Name</dt>
+<dd>Not planned to be ported</dd>
+<dt class="exec implemented">Name <i class="icon-heart"></i></dt>
+<dd>Available at the root, i.e. <code>jsnx.Name</code></dd>
+</dl>
+</div>
+</div>
+<div class="span9 loading">
+<section>
+<p class>This is a rough overview of the modules and methods which have
+been and are going to be ported from NetworkX to JSNetworkX.<br>
+Methods / modules which are only found in JSNetworkX, i.e. which are not
+officially part of NetworkX, are not listed here.
+</p>
+<p>
+Some modules won't be ported since they have third party dependencies (such
+as Numpy) or use technology not available to JavaScript in the browser.
+Other modules might be marked as not portable until a decision about their
+implementation was made or have been ported but are completely different
+than their Python counterpart (e.g. the <code>drawing</code> module).
+</p>
+<hr>
+<div class="lead loader">Loading ...</div>
+<div id="api" class="accordion"></div>
+</section>
+</div>
+</div>
+<script src="javascripts/wont_implement.js"></script>
+<script src="javascripts/gradients.js"></script>
+<script>
+  function toCamelCase(str) {
+    return str.replace(/_(.)/g, function(m, char) {
+      return char.toUpperCase();
+    });
+  }
+  var elements = {};
+  $('#filter').on('click', 'button', function() {
+    if (this.id === 'filter-all') {
+      $('#api .hide').removeClass('hide');
+    }
+    else {
+      $('#api .exec:not(.implemented)').addClass('hide');
+      $('#api .module').not(function() {
+        return $(this).find('.exec.implemented').length !== 0;
+      }).addClass('hide');
+    }
+  });
+
+  $.getJSON('networkx_api.json', function(api) {
+    api.functions.forEach(function(func) {
+      func[0] = toCamelCase(func[0])
+        .replace('.func', '.functions')
+        .replace('.degreeSeq', '.degreeSequence');
+      func[1] = toCamelCase(func[1]);
+    });
+    api.modules = api.modules.map(function(m) {
+      return toCamelCase(m)
+        .replace('.func', '.functions')
+        .replace('.exception', '.exceptions')
+        .replace('.degreeSeq', '.degreeSequence');
+    });
+    api.types.forEach(function(t) {
+      t[0] = toCamelCase(t[0])
+        .replace('.exception', '.exceptions')
+        .replace('.func', '.functions')
+        .replace('.degreeSeq', '.degreeSequence');
+      t[1] = toCamelCase(t[1]);
+    });
+
+    $('.loading').removeClass('loading');
+    $.each(api.modules.slice(1), function(i, m) {
+      genererate_output(m);
+    });
+
+    $.each(api.types, function(i, t) {
+      var m = t[0];
+      var n = t[1].replace('NetworkX', 'JSNetworkX');
+      var e = exists(m, n);
+      var ele = $('<div />', {
+        'class': 'exec type' + (e ? ' implemented' : ''),
+        text: n
+      }).appendTo(elements[m]);
+      if (t[2]) {
+        ele.clone()
+        .toggleClass('implemented', exists('', n))
+        .appendTo(elements['jsnx']);
+        ele.append('&nbsp;<i class="icon-heart"></i>');
+      }
+    });
+    $.each(api.functions, function(i, t) {
+      var m = t[0];
+      var e = exists(m, t[1]);
+      var ele = $('<div />', {
+        'class': 'exec' + (e ? ' implemented' : ''),
+        html: t[1]
+      }).appendTo(elements[m]);
+      ele.toggleClass('wont', (wont_implement.indexOf([m, t[1]].join('.')) > -1 ? ' wont' : '') || ele.closest('.wont').length === 1);
+      if (t[2]) {
+        ele.clone()
+        .toggleClass('implemented', exists('', t[1]))
+        .appendTo(elements['jsnx']);
+        ele.append('&nbsp;<i class="icon-heart"></i>');
+      }
+    });
+
+    var color = d3.scale.linear()
+      .domain([0, 50, 100]).range(['#FFAAAA', '#FFFDAA', '#AAFFAA']);
+
+    $.each(elements, function(n, $ele) {
+      if ($(this).closest('.wont').length > 0) {
+        return;
+      }
+      var $exec = $ele.find('.exec').filter(function() {
+        return $(this).closest('.wont').length === 0;
+      });
+      var total = $exec.length;
+      var impl = $exec.filter('.implemented').length;
+      var p = Math.floor(impl / total * 100);
+      var $header = $ele.parent().prev();
+      var bc = color(p);
+      $header.css('background', 'linear-gradient(to right, ' + bc + ', ' + bc + ' ' +  p + '%, #FFFFFF ' + p + '%, #FFFFFF)');
+      $header.css('background', 'linear-gradient(left, ' + bc + ', ' + bc + ' ' +  p/2 + '%, #FFFFFF ' + p + '%, #FFFFFF)');
+      if (n !== 'jsnx' && $ele.children('.exec.implemented').length > 0) {
+        $header.children('span')
+        .append('&nbsp;&nbsp;')
+        .append($('<a />', {
+          href:'https://github.com/fkling/JSNetworkX/tree/master/' + n.replace(/^jsnx/, 'src').replace(/\./g,'/') + '.js',
+          html: '&rarr; file',
+          on: {
+            click: function(e) {
+              e.stopPropagation();
+            }
+          }
+        }));
+      }
+      $header.children('span').append($('<span />',{
+        text: ' ' + p + '% ported',
+        'class': 'impl_info'
+      }));
+    });
+  });
+
+  function exists(m, n) {
+    var parts = m.split('.').slice(1);
+    m = jsnx;
+    while (parts.length && (m = m[parts.shift()]));
+    return !!(m && n in m);
+  }
+
+  function genererate_output(m) {
+    var top = m.lastIndexOf('.') === -1;
+    if (!top) {
+      var parent = m.substr(0, m.lastIndexOf('.'));
+      if (!(parent in elements) ) {
+        genererate_output(parent);
+      }
+    }
+    var cm = m.replace(/\./g, '_');
+    var $ele = $('<div />', {
+      'class': 'module accordion-group' + (wont_implement.indexOf(m) > -1 ? ' wont' : '')
+    });
+    var $title = $('<span />', {
+      'class': 'accordion-toggle',
+      text: m.substring(m.lastIndexOf('.') + 1)
+    });
+    if (!top) {
+      $title.attr({
+        'data-target': '#' + cm + '_body',
+        'data-toggle': 'collapse'
+      });
+    }
+    var $header = $('<div />', {
+      'class': 'accordion-heading',
+    }).append($title).appendTo($ele);
+    var $body = $('<div />', {'class': 'accordion-inner'}).appendTo(
+      $('<div />', {
+        'class': 'accordion-body collapse accordion' + (top ? ' in' : ''),
+        id: cm + '_body'}
+      ).appendTo($ele)
+      );
+
+      elements[m] = $body;
+      $ele.appendTo(top ? '#api' : elements[parent]);
+    }
+  </script>
+</div>
+<div id="push"></div>
+</div>
+<div id="footer">
+<div class="container">
+<p class="muted credit text-center">
+JSNetworkX was developed by <a href="../index.html">Felix Kling</a> ||
+<a href="https://github.com/fkling/JSNetworkX">GitHub</a>
+</p>
+</div>
+</div>
+<script src="javascripts/graph.js"></script>
+</body>
+</html>

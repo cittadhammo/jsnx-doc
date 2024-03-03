@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>JSNetworkX</title>
+<link href="jsnetworkx/stylesheets/bootstrap.min.css" rel="stylesheet" media="screen">
+<link href="jsnetworkx/stylesheets/styles.css" rel="stylesheet" media="screen">
+<link href="jsnetworkx/stylesheets/bootstrap-responsive.min.css" rel="stylesheet">
+<!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+<script src="https://code.jquery.com/jquery.js"></script>
+<script src="jsnetworkx/javascripts/bootstrap.min.js"></script>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script src="jsnetworkx/javascripts/scale.fix.js"></script>
+<script src="jsnetworkx/javascripts/jsnetworkx.js"></script>
+<script>
+      jsnx.workerPath = 'javascripts/jsnetworkx.js';
+    </script>
+<link href="jsnetworkx/stylesheets/index.css" rel="stylesheet">
+</head>
+<body class="home" data-spy="scroll" data-target=".sidebar">
+<div id="wrap">
+<div class="navbar navbar-fixed-top" data-spy="affix" data-offset-top="1">
+<div class="navbar-inner">
+<div class="container">
+<ul class="nav">
+<li class=" active">
+<a href="jsnetworkx/index.html">Home</a>
+</li>
+<li class>
+<a href="jsnetworkx/getting_started.html">Getting started</a>
+</li>
+<li class>
+<a href="jsnetworkx/examples.html">Examples</a>
+</li>
+<li class>
+<a href="jsnetworkx/documentation.html">Documentation</a>
+</li>
+<li class>
+<a href="jsnetworkx/api_progress.html">API progress</a>
+</li>
+</ul>
+<p class="navbar-text pull-right">
+<a href="https://github.com/fkling/JSNetworkX">
+Fork me on <strong>GitHub</strong>
+</a>
+</p>
+</div>
+</div>
+</div>
+<div id="header">
+<div id="header-chart"></div>
+<div class="container text-center">
+<h1>JSNetworkX</h1>
+<p class="lead">A JavaScript port of the <a href="https://networkx.org/">NetworkX</a> graph library.</p>
+</div>
+</div>
+<div class="container">
+<div class="row" style="padding-top: 30px">
+<div class="span7">
+<div class="alert alert-danger">
+<h4>Note</h4>
+JSNetworkX is not currently maintained. If you are interested in maintaining
+this project please reach out to <a href="index.html">me</a>.
+</div>
+<p>
+JSNetworkX is a port of the popular Python graph library <a href="https://networkx.org/">NetworkX</a>. From their website:
+</p>
+<blockquote>
+<p>NetworkX is a Python language software package for the creation, manipulation, and study of the structure, dynamics, and function of complex networks.</p>
+<p>With NetworkX you can load and store networks in standard and nonstandard data formats, generate many types of random and classic networks, analyze network structure, build network models, design new network algorithms, draw networks, and much more.</p>
+</blockquote>
+<p>
+JSNetworkX aims to bring graph processing to JavaScript, client- and
+server-side, and to provide an easy way to visualize graphs in the
+browser.
+</p>
+<div class="download text-center">
+<a class="btn btn-success btn-large" href="https://raw.github.com/fkling/JSNetworkX/v0.3.4/jsnetworkx.js">Download v0.3.4</a>
+<br>
+<small>
+<a href="https://github.com/fkling/JSNetworkX">GitHub</a>
+</small>
+</div>
+<div class="alert alert-info">
+<h4>Note</h4>
+JSNetworkX is still
+in an early stage of development and only part of NetworkX has been fully ported.
+The <a href="jsnetworkx/api_progress.html">API progress page</a> provides a list of methods and modules which are
+available to use. The base graph classes and SVG drawing are already
+available.
+</div>
+</div>
+<div class="span5">
+<div id="canvas" data-spy="affix" data-offset-top="210">
+<span class="description"></span>
+</div>
+</div>
+</div>
+<div class="row">
+<div class="span7">
+<h3>Credits</h3>
+<p>JSNetworkX and this website make use of various libraries and tools and we want to hereby thank them:</p>
+<ul>
+<li><a href="https://networkx.github.com/">NetworkX</a> &mdash; it all started with this library</li>
+<li><a href="http://babeljs.io/">Babel</a> &mdash; JS transpiler</li>
+<li><a href="http://browserify.org/">browserify</a> &mdash; bundler</li>
+<li><a href="http://visionmedia.github.io/mocha/">mocha</a> &mdash; testing framework</li>
+<li><a href="http://d3js.org/">D3.js</a> &mdash; graph visualization</li>
+</ul>
+<ul>
+<li><a href="https://twitter.github.com/bootstrap/">Bootstrap</a> &mdash; website design</li>
+<li><a href="http://jquery.com/">jQuery</a> &mdash; website toolkit</li>
+<li><a href="https://code.google.com/p/google-code-prettify/">Google Code Prettify</a> &mdash; syntax highlighter</li>
+<li><a href="https://github.com/">Github</a> &mdash; website and code hosting</li>
+</li>
+</ul>
+</div>
+</div>
+<script src="jsnetworkx/javascripts/home_examples.js"></script>
+<script src="jsnetworkx/javascripts/rotate_examples.js"></script>
+</div>
+<div id="push"></div>
+</div>
+<div id="footer">
+<div class="container">
+<p class="muted credit text-center">
+JSNetworkX was developed by <a href="index.html">Felix Kling</a> ||
+<a href="https://github.com/fkling/JSNetworkX">GitHub</a>
+</p>
+</div>
+</div>
+</body>
+</html>

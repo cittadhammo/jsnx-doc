@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="JavaScript: How (not) to get a value " out of" a callback" />
+<meta name="dcterms.date" content="2019-03-28 00:00:00 +0100" />
+<title>JavaScript: How (not) to get a value "out of" a callback</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2019-03-28 00:00:00 +0100">March 28, 2019</time>
+<h1>JavaScript: How (not) to get a value "out of" a callback</h1>
+<p>Callback functions appear to be a complex topic for people, especially if they
+are new to JavaScript. I believe however that they are often making it more
+difficult for themselves than it has to be.</p>
+<p>Something is complex when there are many rules and/or exceptions around it.<br/>
+Remembering all the rules and exceptions can be difficult. If you assume that
+there are special rules around callback functions then you perceive them as
+more complex or difficult to understand.</p>
+<p>In this post I&#8217;m showing two common mistakes with callbacks and try to show
+that callback functions are functions like any other with no extra rules. Only
+a basic understanding of functions is required to understand callbacks,
+although we will briefly touch on asynchronous code at the end.</p>
+<h2 id="function-basics">
+Function basics <a href="javascript-callbacks-misconceptions.html#function-basics">#</a>
+</h2>
+<p>Just like in mathematics, a function processes some <strong>input</strong> and <strong>returns a
+result</strong> (output). Here is a simple function that adds two numbers:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">add</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">a</span> <span class="o">+</span> <span class="nx">b</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>The function has two <strong>parameters</strong>, <code class="language-plaintext highlighter-rouge">a</code> and <code class="language-plaintext highlighter-rouge">b</code> and returns their sum. When we
+call the function as</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">add</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">);</span>
+<span class="c1">// result = 3</span>
+</code></pre></div></div>
+<p>we are supplying two <strong>arguments</strong>, which are assigned to each parameter
+respectively, and store the function&#8217;s <strong>return value</strong> in a variable.</p>
+<p>However, functions do not have to accept input or return a result, they can
+also &#8220;just do&#8221; something:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// No return value</span>
+<span class="kd">function</span> <span class="nx">logWithTime</span><span class="p">(</span><span class="nx">message</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span> <span class="o">+</span> <span class="dl">"</span><span class="s2"> </span><span class="dl">"</span> <span class="o">+</span> <span class="nx">message</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="nx">logWithTime</span><span class="p">(</span><span class="dl">"</span><span class="s2">Hello World!</span><span class="dl">"</span><span class="p">);</span>
+
+<span class="c1">// No input or return value</span>
+<span class="kd">function</span> <span class="nx">warn</span><span class="p">()</span> <span class="p">{</span>
+  <span class="nx">alert</span><span class="p">(</span><span class="dl">"</span><span class="s2">This is a warning!</span><span class="dl">"</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="nx">warn</span><span class="p">();</span>
+</code></pre></div></div>
+<p>While both examples have a visible outcome, they are not <strong><code class="language-plaintext highlighter-rouge">return</code>ing</strong> a
+value.</p>
+<h3 id="who-is-the-caller">
+Who is the caller? <a href="javascript-callbacks-misconceptions.html#who-is-the-caller">#</a>
+</h3>
+<p>Note that in all examples so far, <strong>we</strong> directly called the functions, which
+allowed us to pass arguments (if they accepted them) and do something with
+their return values (if they returned something).</p>
+<p>Most functions however are not directly called by us but by other functions:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">stringRepeat</span><span class="p">(</span><span class="nx">str</span><span class="p">,</span> <span class="nx">count</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">result</span> <span class="o">=</span> <span class="dl">""</span><span class="p">;</span>
+  <span class="k">while</span> <span class="p">(</span><span class="nx">count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">result</span> <span class="o">+=</span> <span class="nx">str</span><span class="p">;</span>
+    <span class="nx">count</span><span class="o">--</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="nx">leftPad</span><span class="p">(</span><span class="nx">str</span><span class="p">,</span> <span class="nx">width</span><span class="p">,</span> <span class="nx">fillCharacter</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">str</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;=</span> <span class="nx">width</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">str</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">stringRepeat</span><span class="p">(</span><span class="nx">fillCharacter</span><span class="p">,</span> <span class="nx">width</span> <span class="o">-</span> <span class="nx">str</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span> <span class="o">+</span> <span class="nx">str</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kd">var</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">leftPad</span><span class="p">(</span><span class="dl">"</span><span class="s2">foo</span><span class="dl">"</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="dl">"</span><span class="s2">x</span><span class="dl">"</span><span class="p">);</span>
+<span class="c1">// result = "xxfoo"</span>
+</code></pre></div></div>
+<p>Here we are only calling <code class="language-plaintext highlighter-rouge">leftPad</code> directly, which in turn calls
+<code class="language-plaintext highlighter-rouge">stringRepeat</code>. This makes <code class="language-plaintext highlighter-rouge">leftPad</code> the <strong>caller</strong> of <code class="language-plaintext highlighter-rouge">stringRepeat</code>, which
+means it controls which arguments to pass and what to do with the return value,
+not us.</p>
+<h2 id="execution-flow">
+Execution flow <a href="javascript-callbacks-misconceptions.html#execution-flow">#</a>
+</h2>
+<p>This might be obvious, but just to reaffirm: Statements are evaluated in the
+order they are written in source code.</p>
+<p>If two function calls follow each other, the second one will only be executed
+after the first function call returned:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">foo</span><span class="p">();</span>
+<span class="nx">bar</span><span class="p">();</span>
+</code></pre></div></div>
+<p><code class="language-plaintext highlighter-rouge">bar</code> is only called after <code class="language-plaintext highlighter-rouge">foo</code> returned, which implies that all statements
+inside <code class="language-plaintext highlighter-rouge">foo</code> are evaluated before <code class="language-plaintext highlighter-rouge">bar</code> is called.</p>
+<h2 id="what-are-callbacks">
+What are callbacks? <a href="javascript-callbacks-misconceptions.html#what-are-callbacks">#</a>
+</h2>
+<p>Simply put a callback is <strong>a function</strong> that is passed <strong>as argument</strong> to
+<strong>another function</strong>. Why is that useful? Lets look at the following example:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">allUpper</span><span class="p">(</span><span class="nx">array</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">result</span> <span class="o">=</span> <span class="p">[];</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">array</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">result</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nx">array</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">toUpperCase</span><span class="p">();</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="nx">allLower</span><span class="p">(</span><span class="nx">array</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">result</span> <span class="o">=</span> <span class="p">[];</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">array</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">result</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nx">array</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">toLowerCase</span><span class="p">();</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nx">allUpper</span><span class="p">([</span><span class="dl">'</span><span class="s1">Foo</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">Bar</span><span class="dl">'</span><span class="p">]);</span> <span class="c1">// ['FOO', 'BAR']</span>
+<span class="nx">allLower</span><span class="p">([</span><span class="dl">'</span><span class="s1">Foo</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">Bar</span><span class="dl">'</span><span class="p">]);</span> <span class="c1">// ['foo', 'bar']</span>
+</code></pre></div></div>
+<p>Both functions do basically the same thing: They process each element in an
+array and return a new array. It would be great if we can somehow separate the
+result array creation from the element processing:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">map</span><span class="p">(</span><span class="nx">array</span><span class="p">,</span> <span class="nx">processElement</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">result</span> <span class="o">=</span> <span class="p">[];</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">array</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">result</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nx">processElement</span><span class="p">(</span><span class="nx">array</span><span class="p">[</span><span class="nx">i</span><span class="p">]);</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">result</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>This function has two parameters: The first is expected to be an array and the
+second one is expected to be a function. That function is passed a single array
+element and should return the processed result.</p>
+<p>We can use this function like so:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">toUpper</span><span class="p">(</span><span class="nx">item</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">item</span><span class="p">.</span><span class="nx">toUpperCase</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="nx">toLower</span><span class="p">(</span><span class="nx">item</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">item</span><span class="p">.</span><span class="nx">toLowerCase</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="nx">map</span><span class="p">([</span><span class="dl">'</span><span class="s1">Foo</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">Bar</span><span class="dl">'</span><span class="p">],</span> <span class="nx">toUpper</span><span class="p">);</span> <span class="c1">// ['FOO', 'BAR']</span>
+<span class="nx">map</span><span class="p">([</span><span class="dl">'</span><span class="s1">Foo</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">Bar</span><span class="dl">'</span><span class="p">],</span> <span class="nx">toLower</span><span class="p">);</span> <span class="c1">// ['foo', 'bar']</span>
+</code></pre></div></div>
+<p>Here <code class="language-plaintext highlighter-rouge">toUpper</code> and <code class="language-plaintext highlighter-rouge">toLower</code> are used as <strong>callbacks</strong> for <code class="language-plaintext highlighter-rouge">map</code>.</p>
+<p>(Processing each element in an array and producing a new array is such a common
+operation that it is built into the language:
+<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map"><code class="language-plaintext highlighter-rouge">Array#map</code></a>).</p>
+<p><strong>IMPORTANT:</strong> The <strong>caller of the callback</strong> is usually the function we pass
+the callback to, but <strong>never</strong> us.</p><hr/>
+<h2 id="misconception-1-returning-from-the-callback">
+Misconception 1: Returning from the callback <a href="javascript-callbacks-misconceptions.html#misconception-1-returning-from-the-callback">#</a>
+</h2>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// BROKEN!</span>
+<span class="kd">var</span> <span class="nx">someData</span> <span class="o">=</span> <span class="nx">someFunction</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">someResult</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">someResult</span><span class="p">;</span>
+<span class="p">});</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">someData</span><span class="p">);</span> <span class="c1">// expected to be equal to `someResult`</span>
+</code></pre></div></div>
+<p>The first misconception is that returning from the callback will somehow return
+from the function the callback is passed to. Maybe it&#8217;s because the function
+definition is inlined with the function call and thus the callback somehow
+appears to be &#8220;inside&#8221; the other function.</p>
+<p>However, the code behaves exactly the same if we defined the callback upfront:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// BROKEN!</span>
+<span class="kd">function</span> <span class="nx">doSomething</span><span class="p">(</span><span class="nx">someResult</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">someResult</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kd">var</span> <span class="nx">someData</span> <span class="o">=</span> <span class="nx">someFunction</span><span class="p">(</span><span class="nx">doSomething</span><span class="p">);</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">someData</span><span class="p">);</span> <span class="c1">// expected to be `someResult`</span>
+</code></pre></div></div>
+<p>Even without knowing anything about <code class="language-plaintext highlighter-rouge">someFunction</code>, we can make the following
+observations:</p>
+<ul>
+<li>
+<p>We are calling <code class="language-plaintext highlighter-rouge">someFunction</code>, therefore we are assigning <strong><code class="language-plaintext highlighter-rouge">someFunction</code>&#8217;s
+return value</strong> to <code class="language-plaintext highlighter-rouge">someData</code>.</p>
+</li>
+<li>
+<p><code class="language-plaintext highlighter-rouge">someFunction</code> may or may not call <code class="language-plaintext highlighter-rouge">doSomething</code>, i.e. <strong><code class="language-plaintext highlighter-rouge">someFunction</code> is
+the caller</strong> of <code class="language-plaintext highlighter-rouge">doSomething</code>, therefore it may or may not do something with
+<strong><code class="language-plaintext highlighter-rouge">doSomething</code>&#8217;s return value</strong>.</p>
+</li>
+</ul>
+<p><strong>This is the key point</strong>: <strong>We</strong> do <strong>not</strong> call <code class="language-plaintext highlighter-rouge">doSomething</code>, therefore we
+don&#8217;t have any control over what happens to its return value.</p>
+<p>It could indeed be the case that <code class="language-plaintext highlighter-rouge">someFunction</code> returns <code class="language-plaintext highlighter-rouge">doSomething</code>&#8217;s return
+value, e.g.</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">someFunction</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">callback</span><span class="p">(</span><span class="mi">42</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>and the example above would work.</p>
+<p>But it also may not:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">someFunction</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">callback</span><span class="p">(</span><span class="mi">42</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>We cannot know just by looking at the initial example. What the return value of
+<code class="language-plaintext highlighter-rouge">someFunction</code> is really depends on what the function does (which is usually
+described in its documentation) and is not necessarily related to the return
+value of the callback.</p><hr/>
+<h2 id="misconception-2-assigning-to-an-outer-variable">
+Misconception 2: Assigning to an &#8220;outer&#8221; variable <a href="javascript-callbacks-misconceptions.html#misconception-2-assigning-to-an-outer-variable">#</a>
+</h2>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// BROKEN!</span>
+<span class="kd">var</span> <span class="nx">someData</span><span class="p">;</span>
+<span class="nx">someFunction</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">someResult</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">someData</span> <span class="o">=</span> <span class="nx">someResult</span><span class="p">;</span>
+<span class="p">});</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">someData</span><span class="p">);</span>
+</code></pre></div></div>
+<p>In this case the callback explicitly assigns the value it gets passed to
+another variable, defined outside of it.</p>
+<p>The same code with a separate function declaration:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// BROKEN!</span>
+<span class="kd">var</span> <span class="nx">someData</span><span class="p">;</span>
+
+<span class="kd">function</span> <span class="nx">doSomething</span><span class="p">(</span><span class="nx">someResult</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">someData</span> <span class="o">=</span> <span class="nx">someResult</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nx">someFunction</span><span class="p">(</span><span class="nx">doSomething</span><span class="p">);</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">someData</span><span class="p">);</span>
+</code></pre></div></div>
+<p>Without knowing what <code class="language-plaintext highlighter-rouge">someFunction</code> does, we can state the following:</p>
+<p>If <code class="language-plaintext highlighter-rouge">someFunction</code> calls <code class="language-plaintext highlighter-rouge">doSomething</code> <strong>before</strong> <code class="language-plaintext highlighter-rouge">someFunction</code> returns,
+<code class="language-plaintext highlighter-rouge">someResult</code> is assigned to <code class="language-plaintext highlighter-rouge">someData</code> before <code class="language-plaintext highlighter-rouge">console.log</code> is called. In other
+words, <code class="language-plaintext highlighter-rouge">console.log(someData)</code> will log the same value as <code class="language-plaintext highlighter-rouge">someResult</code>.</p>
+<p>How can a function call another function <strong>after</strong> it returns? That&#8217;s were
+<strong>asynchronous code execution</strong> comes into play.</p>
+<h3 id="a-short-introduction-to-asynchronous-code">
+A short introduction to asynchronous code <a href="javascript-callbacks-misconceptions.html#a-short-introduction-to-asynchronous-code">#</a>
+</h3>
+<p>When we talk about asynchronous code, we usually refer to a function that will
+be executed some time in the future, either in response to some event or
+because a specific amount of time has passed.</p>
+<p>A simple way to schedule a function to run in the future is via
+<a href="https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/setTimeout"><code class="language-plaintext highlighter-rouge">setTimeout</code></a>:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">setTimeout</span><span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">hello</span><span class="dl">'</span><span class="p">);</span> <span class="p">},</span> <span class="mi">1000</span><span class="p">);</span>
+</code></pre></div></div>
+<p>This schedules the passed function to be called &#8220;later&#8221; and after at least one
+second.</p>
+<p>The second important aspect about asynchronous code execution is that
+<strong>scheduled functions are only executed if the runtime isn&#8217;t busy</strong> executing
+other code.</p>
+<p>Consider the following example:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">setTimeout</span><span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">world</span><span class="dl">'</span><span class="p">);</span> <span class="p">},</span> <span class="mi">0</span><span class="p">);</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">hello</span><span class="dl">'</span><span class="p">);</span>
+</code></pre></div></div>
+<p><code class="language-plaintext highlighter-rouge">setTimeout</code> schedules a function to be called later, but as soon as possible
+(the timeout is <code class="language-plaintext highlighter-rouge">0</code>). However the callback won&#8217;t be executed immediately
+because the runtime is still busy evaluating the function call that follows the
+<code class="language-plaintext highlighter-rouge">setTimeout</code> call, <code class="language-plaintext highlighter-rouge">console.log('hello')</code>. Only after <em>that</em> call the runtime
+is free to process any scheduled functions.</p>
+<p>This is also called
+<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/EventLoop#Run-to-completion"><strong>run-to-completion</strong></a>.</p>
+<p><em>&#8220;Wait!&#8221;</em> you might think. <em>&#8220;Didn&#8217;t you say earlier that statements are
+executed in the order they are written? Why is the function passed to
+<code class="language-plaintext highlighter-rouge">setTimeout</code> not called before the second <code class="language-plaintext highlighter-rouge">console.log</code>?&#8221;</em></p>
+<p>As in the previous misconception: We are <strong>not</strong> calling the function passed to
+<code class="language-plaintext highlighter-rouge">setTimeout</code>. We merely pass the function object itself. <code class="language-plaintext highlighter-rouge">setTimeout</code> isn&#8217;t
+calling the function either. It&#8217;s telling the runtime to call this function
+some time in the future.</p>
+<p>Back to the example:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// BROKEN!</span>
+<span class="kd">var</span> <span class="nx">someData</span><span class="p">;</span>
+
+<span class="kd">function</span> <span class="nx">doSomething</span><span class="p">(</span><span class="nx">someResult</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">someData</span> <span class="o">=</span> <span class="nx">someResult</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nx">someFunction</span><span class="p">(</span><span class="nx">doSomething</span><span class="p">);</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">someData</span><span class="p">);</span>
+</code></pre></div></div>
+<p>If <code class="language-plaintext highlighter-rouge">someFunction</code> doesn&#8217;t call <code class="language-plaintext highlighter-rouge">doSomething</code> immediately but schedules it to
+run some time in the future, <code class="language-plaintext highlighter-rouge">console.log(someData)</code> is guaranteed to execute
+<strong>before</strong> the assignment <code class="language-plaintext highlighter-rouge">someData = someResult</code> happens.</p>
+<p>Here again, the documentation of <code class="language-plaintext highlighter-rouge">someFunction</code> should describe how the
+callback is used and whether the function performs asynchronous computation or
+not.</p><hr/>
+<h2 id="conclusion">
+Conclusion <a href="javascript-callbacks-misconceptions.html#conclusion">#</a>
+</h2>
+<p>A simple thought experiment to spot issues with callbacks is the following:</p>
+<p>Consider one of the examples again:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// BROKEN!</span>
+<span class="kd">var</span> <span class="nx">someData</span><span class="p">;</span>
+<span class="nx">someFunction</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">someResult</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">someData</span> <span class="o">=</span> <span class="nx">someResult</span><span class="p">;</span>
+<span class="p">});</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">someData</span><span class="p">);</span>
+</code></pre></div></div>
+<p>We are trying to get the result &#8220;out&#8221; that <code class="language-plaintext highlighter-rouge">someFunction</code> passed to the
+callback. <strong>If</strong> <code class="language-plaintext highlighter-rouge">someFunction</code> returned the result instead we could simplify
+our code to:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">someData</span> <span class="o">=</span> <span class="nx">someFunction</span><span class="p">();</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">someData</span><span class="p">);</span>
+</code></pre></div></div>
+<p>But the very fact that <code class="language-plaintext highlighter-rouge">someFunction</code> <strong>requires</strong> a callback instead of
+directly returning the result is already an indication that assigning the
+result to <code class="language-plaintext highlighter-rouge">someData</code> won&#8217;t work!</p>
+<p>So, what should you do?</p>
+<p><strong>Instead of trying to get a value to the code that needs it, move the code to
+where the value is.</strong></p>
+<p>That means moving the code inside the callback function or into another
+function that is called from the callback.</p>
+<p>For example:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// BROKEN!</span>
+<span class="kd">var</span> <span class="nx">someData</span><span class="p">;</span>
+
+<span class="kd">function</span> <span class="nx">doSomething</span><span class="p">(</span><span class="nx">someResult</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">someData</span> <span class="o">=</span> <span class="nx">someResult</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nx">someFunction</span><span class="p">(</span><span class="nx">doSomething</span><span class="p">);</span>
+
+<span class="c1">// Code that needs someData</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">someData</span><span class="p">);</span>
+
+<span class="c1">// Other code</span>
+</code></pre></div></div>
+<p>becomes</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Working</span>
+
+<span class="kd">function</span> <span class="nx">doSomething</span><span class="p">(</span><span class="nx">someData</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// Code that needs someData</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">someData</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="nx">someFunction</span><span class="p">(</span><span class="nx">doSomething</span><span class="p">);</span>
+
+<span class="c1">// Other code</span>
+</code></pre></div></div>
+<p>or</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Working</span>
+
+<span class="kd">function</span> <span class="nx">doSomethingElse</span><span class="p">(</span><span class="nx">someData</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// Code that needs someData</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">someData</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="nx">doSomething</span><span class="p">(</span><span class="nx">someResult</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// do stuff</span>
+  <span class="nx">doSomethingElse</span><span class="p">(</span><span class="nx">someResult</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="nx">someFunction</span><span class="p">(</span><span class="nx">doSomething</span><span class="p">);</span>
+
+<span class="c1">// Other code</span>
+</code></pre></div></div><hr/>
+<h2 id="further-reading">
+Further reading <a href="javascript-callbacks-misconceptions.html#further-reading">#</a>
+</h2>
+<ul>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions">MDN JavaScript Guide: Functions</a></li>
+<li><a href="http://speakingjs.com/es5/ch15.html">&#8220;SpeakingJS: Functions&#8221; by Dr. Axel
+Rauschmayer</a></li>
+<li><a href="https://eloquentjavascript.net/03_functions.html">&#8220;Eloquent Javascript: Functions&#8221; by Marijn
+Haverbeke</a></li>
+</ul>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="sonos-dedicated-vlan.html">&larr; Sonos speakers on a dedicated subnet/VLAN</a>
+<a style="float: right" href="logwatch-bogofilter.html">Logwatch filter for Bogofilter &rarr;</a>
+</p>
+</footer>
+</body>
+</html>

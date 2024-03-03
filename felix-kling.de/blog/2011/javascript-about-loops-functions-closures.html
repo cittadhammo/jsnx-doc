@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="JavaScript: About loops, functions and closures" />
+<meta name="dcterms.date" content="2011-01-09 00:00:00 +0100" />
+<title>JavaScript: About loops, functions and closures</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2011-01-09 00:00:00 +0100">January 09, 2011</time>
+<h1>JavaScript: About loops, functions and closures</h1>
+<p>On <a href="http://stackoverflow.com/">Stack Overflow</a>, nearly every day (at least it
+feels like so) I find questions about why some JavaScript code gives unexpected
+results - and the reason is almost always the same.</p>
+<p>Let me take you on a short journey about loops, functions and closures.</p>
+<h2 id="loops">
+Loops <a href="javascript-about-loops-functions-closures.html#loops">#</a>
+</h2>
+<p>A <code class="language-plaintext highlighter-rouge">for</code> loop in JavaScript seems to be the same as a <code class="language-plaintext highlighter-rouge">for</code> loop in C or Java,
+but it is not. It is actually more like in PHP.</p>
+<p>The most important thing to know about loops in JavaScript is that they do
+<strong>not create a scope</strong>. JavaScript does not have block
+<a href="https://en.wikipedia.org/wiki/Scope_%28programming%29">scope</a>, only function
+scope. What does this mean?</p>
+<p>Consider the following snippet:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">foo</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">bar</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="mi">42</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">baz</span> <span class="o">=</span> <span class="nx">i</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="cm">/* more code */</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>It is clear that <code class="language-plaintext highlighter-rouge">bar</code> will be available in the whole function.
+But <code class="language-plaintext highlighter-rouge">baz</code> (and <code class="language-plaintext highlighter-rouge">i</code>) will be too! There is only one difference: Until the first
+iteration of the loop, <code class="language-plaintext highlighter-rouge">baz</code> will have the value <code class="language-plaintext highlighter-rouge">undefined</code>. After the loop,
+it will have the value <code class="language-plaintext highlighter-rouge">41</code> (and <code class="language-plaintext highlighter-rouge">i</code> will be <code class="language-plaintext highlighter-rouge">42</code>).</p>
+<p>So any variable you declare anywhere in a function will be available everywhere
+in the function, but it will only have a value after one was assigned to it. The
+above is equivalent to:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">foo</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">bar</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="nx">baz</span><span class="p">,</span> <span class="nx">i</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="mi">42</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">baz</span> <span class="o">=</span> <span class="nx">i</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="cm">/* more code */</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>Lets continue.</p>
+<h2 id="functions">
+Functions <a href="javascript-about-loops-functions-closures.html#functions">#</a>
+</h2>
+<p>Functions are powerful in JavaScript. Because they are <a href="https://en.wikipedia.org/wiki/First-class_function">first-class
+citizens</a>, you can pass them
+around like any other value. Therefore you can also create functions inside
+functions and return them, e.g.:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">foo</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="kd">function</span><span class="p">(</span><span class="nx">x</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="mi">42</span> <span class="o">*</span> <span class="nx">x</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>Which brings us to the next point.</p>
+<h2 id="closures">
+Closures <a href="javascript-about-loops-functions-closures.html#closures">#</a>
+</h2>
+<p><a href="https://en.wikipedia.org/wiki/Closure_%28computer_science%29">Closures</a> are nothing
+else then functions defined in other functions that are passed to some other
+context. They are called <em>closures</em> because they close over the local variables
+of the function they are defined in (i.e. they have access to the other
+functions <em>scope</em>).</p>
+<p>Again an example:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">foo</span><span class="p">(</span><span class="nx">x</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="mi">42</span> <span class="o">*</span> <span class="nx">x</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>This time, <code class="language-plaintext highlighter-rouge">x</code> defined as parameter of <code class="language-plaintext highlighter-rouge">foo</code>, and <code class="language-plaintext highlighter-rouge">var bar = foo(2)();</code> would
+return <code class="language-plaintext highlighter-rouge">84</code>. The inner function, the function that is returned by <code class="language-plaintext highlighter-rouge">foo</code> has
+access to <code class="language-plaintext highlighter-rouge">x</code>.</p>
+<h2 id="functions-inside-loops">
+Functions inside loops <a href="javascript-about-loops-functions-closures.html#functions-inside-loops">#</a>
+</h2>
+<p>Why is all this important? Because it gives those who want to create functions
+that depend on loop variables a hard time. Consider this snippet which assigns
+an <code class="language-plaintext highlighter-rouge">click</code> handler to various elements:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// elements is an array of 3 DOM elements</span>
+<span class="kd">var</span> <span class="nx">values</span> <span class="o">=</span> <span class="p">[</span><span class="dl">'</span><span class="s1">foo</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">bar</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">baz</span><span class="dl">'</span><span class="p">];</span>
+
+<span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">l</span> <span class="o">=</span> <span class="nx">elements</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">l</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">data</span> <span class="o">=</span> <span class="nx">values</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+  <span class="nx">elements</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">onclick</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">alert</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span>
+  <span class="p">};</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>What is the value they elements will <code class="language-plaintext highlighter-rouge">alert</code> when they are clicked? It will
+be the same for all, namely <code class="language-plaintext highlighter-rouge">baz</code>. Here is the reason again: By the time, the
+event handler is called, the <code class="language-plaintext highlighter-rouge">for</code> has already finished. JavaScript has no block scope,
+i.e. all the handlers share a reference to <em>the same</em> <code class="language-plaintext highlighter-rouge">data</code> variable. After
+the loop, this value will be <code class="language-plaintext highlighter-rouge">values[2]</code> which is <code class="language-plaintext highlighter-rouge">baz</code>.
+You can also think this way: Every variable declaration in a function creates
+one place in the memory to store the data. In the <code class="language-plaintext highlighter-rouge">for</code> this data is just
+changed over and over again, the position in the memory stays the same. Every
+event handler access the <em>same position in the memory</em>.</p>
+<h2 id="how-to-fix-this">
+How to fix this? <a href="javascript-about-loops-functions-closures.html#how-to-fix-this">#</a>
+</h2>
+<p>The only solution is to introduce another scope that &#8220;captures&#8221; the current
+value of <code class="language-plaintext highlighter-rouge">data</code>. JavaScript has only function scope. So we have to introduce
+another function. We could do something like:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">createEventHandler</span><span class="p">(</span><span class="nx">x</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">alert</span><span class="p">(</span><span class="nx">x</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">l</span> <span class="o">=</span> <span class="nx">elements</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">l</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">data</span> <span class="o">=</span> <span class="nx">values</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+  <span class="nx">elements</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">onclick</span> <span class="o">=</span> <span class="nx">createEventHandler</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>This works, because the value of <code class="language-plaintext highlighter-rouge">data</code> will be stored in the local scope of
+<code class="language-plaintext highlighter-rouge">createEventHandler</code> and this function is executed newly in every iteration.</p>
+<p>This can be written shorter using <em>immediate executing functions</em>:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">l</span> <span class="o">=</span> <span class="nx">elements</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">l</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">data</span> <span class="o">=</span> <span class="nx">values</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+  <span class="nx">elements</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">onclick</span> <span class="o">=</span> <span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">x</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+      <span class="nx">alert</span><span class="p">(</span><span class="nx">x</span><span class="p">);</span>
+    <span class="p">};</span>
+  <span class="p">}(</span><span class="nx">data</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>This might look special but it really is not. It is just substituting the
+<code class="language-plaintext highlighter-rouge">createEventHandler</code> by the function definition.</p><hr/>
+<h2 id="further-information">
+Further information <a href="javascript-about-loops-functions-closures.html#further-information">#</a>
+</h2>
+<ul>
+<li><a href="http://blog.morrisjohns.com/javascript_closures_for_dummies.html">JavaScript Closures for Dummies</a></li>
+<li><a href="https://developer.mozilla.org/en/JavaScript/Guide/Closures">MDC - Closures</a></li>
+<li><a href="https://developer.mozilla.org/en/Core_JavaScript_1.5_Guide/Functions">MDC - Functions</a></li>
+</ul>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="how-to-detect-history-pushstate.html">&larr; How to detect when HTML5's history.pushState() is called?</a>
+<a style="float: right" href="php-and-jsonp.html">PHP and JSONP &rarr;</a>
+</p>
+</footer>
+</body>
+</html>

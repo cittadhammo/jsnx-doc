@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="Custom GitHub pages redirect with nginx" />
+<meta name="dcterms.date" content="2020-06-09 00:00:00 +0200" />
+<title>Custom GitHub pages redirect with nginx</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2020-06-09 00:00:00 +0200">June 09, 2020</time>
+<h1>Custom GitHub pages redirect with nginx</h1>
+<p>I migrated my personal website from <a href="https://pages.github.com/">GitHub Pages</a>
+to my own web server a while ago. VPS&#8217; are cheap and I enjoy managing my own
+web server.</p>
+<p>However, there is one feature GitHub pages provides that I wanted to preserve:
+When you have a user page with a custom domain (might also work without a
+custom domain, not sure), every project page is available under
+<code class="language-plaintext highlighter-rouge">http://example.net/&lt;project&gt;/</code> (where <code class="language-plaintext highlighter-rouge">example.net</code> is the custom user page
+domain).</p>
+<p>I wanted to preserve this behavior, primarily because I didn&#8217;t want to break
+existing links, but I also wanted to do this in an automated way.</p>
+<h2 id="the-github-api">
+The GitHub API <a href="custom-github-pages-redirect.html#the-github-api">#</a>
+</h2>
+<p>The first step was to get information about which of my repositories have GitHub
+pages enabled.</p>
+<p><a href="https://developer.github.com/v3/">GitHub provides an API</a> to access
+information about repositories. Some information is publicly accessible without
+authentication. That makes getting the information much easier. Unauthenticated
+access is subject to stricter rate
+limits, but that is not an issue in my case.</p>
+<p>The endpoint to use is <code class="language-plaintext highlighter-rouge">https://api.github.com/users/&lt;user&gt;/repos</code> which
+returns a (JSON) array of repo objects. You can <code class="language-plaintext highlighter-rouge">curl</code> the URL for your own
+user account to see all the data available.</p>
+<p>The properties we are most interested in are <code class="language-plaintext highlighter-rouge">name</code> and <code class="language-plaintext highlighter-rouge">has_pages</code>: <code class="language-plaintext highlighter-rouge">name</code> is the
+value to be used in URL to redirect to, <code class="language-plaintext highlighter-rouge">has_pages</code> tells us whether the repo
+has GitHub pages enabled.</p>
+<h2 id="jq-to-the-rescue">
+<code class="language-plaintext highlighter-rouge">jq</code> to the rescue <a href="custom-github-pages-redirect.html#jq-to-the-rescue">#</a>
+</h2>
+<p><a href="https://stedolan.github.io/jq/"><code class="language-plaintext highlighter-rouge">jq</code></a> is a powerful little utility for
+processing JSON data. To filter the array for repos that have a GitHub page and
+get there name&#8217;s, I use the following command:</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl &lt;url&gt; | jq <span class="nt">-r</span> <span class="s1">'.[] | select(.has_pages) | .name'</span>
+</code></pre></div></div>
+<h2 id="creating-nginx-directives">
+Creating nginx directives <a href="custom-github-pages-redirect.html#creating-nginx-directives">#</a>
+</h2>
+<p>I use <a href="https://www.nginx.com/">nginx</a> as my webserver. In order to redirect
+requests to GitHub I have to create <code class="language-plaintext highlighter-rouge">location</code> directives that look like</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>location /the-repo/ {
+  proxy-pass https://&lt;user&gt;.github.io/the-repo/;
+}
+</code></pre></div></div>
+<p>This is pretty easy to do with <code class="language-plaintext highlighter-rouge">awk</code> or <code class="language-plaintext highlighter-rouge">sed</code>:</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">awk</span> <span class="s1">'{ printf "location /%s/ {\n proxy_pass https://&lt;user&gt;.github.io/%s/;\n}\n", $0, $0}'</span> <span class="o">&gt;</span> github-pages-redirect
+</code></pre></div></div>
+<p>The created file just needs to be included in the main nginx configuration
+file for the site and the server needs to be reloaded:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># /etc/nginx/sites-enabled/&lt;site&gt;
+
+server {
+ ...
+
+ include path/to/github-pages-redirect;
+}
+</code></pre></div></div>
+<h2 id="complete-script">
+Complete script <a href="custom-github-pages-redirect.html#complete-script">#</a>
+</h2>
+<p>Here is the complete script with placeholders. It also checks whether the
+generated file not empty because I got invalid responses from the GitHub API
+from time to time.</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/sh</span>
+
+<span class="nv">GH_ACCOUNT</span><span class="o">=</span>account
+<span class="nv">FILE</span><span class="o">=</span><span class="nv">$HOME</span>/github-pages-redirect
+
+curl <span class="nt">--silent</span> https://api.github.com/users/<span class="k">${</span><span class="nv">GH_ACCOUNT</span><span class="k">}</span>/repos |
+	jq <span class="nt">-r</span> <span class="s1">'.[] | select (.has_pages==true) | .name'</span> |
+		<span class="nb">sort</span> |
+			<span class="nb">awk</span> <span class="s1">'{ printf "location /%s/ {\n proxy_pass https://${GH_ACCOUNT}.github.io/%s/;\n}\n", $0, $0}'</span> <span class="o">&gt;</span> <span class="nv">$FILE</span>.new
+
+<span class="k">if </span>diff <span class="nt">--new-file</span> <span class="nv">$FILE</span> <span class="nv">$FILE</span>.new<span class="p">;</span> <span class="k">then
+	</span><span class="nb">exit </span>0
+<span class="k">fi
+
+</span><span class="nb">mv</span> <span class="nv">$FILE</span>.new <span class="nv">$FILE</span>
+<span class="nb">sudo </span>systemctl reload nginx
+</code></pre></div></div>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="../2019/logwatch-bogofilter.html">&larr; Logwatch filter for Bogofilter</a>
+<a style="float: right" href="../2021/linux-toggle-dark-mode.html">Automatically switch color schemes in i3, kitty, neovim and GTK applications &rarr;</a>
+</p>
+</footer>
+</body>
+</html>

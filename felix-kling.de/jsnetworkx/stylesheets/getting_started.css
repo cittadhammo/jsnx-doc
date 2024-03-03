@@ -1,0 +1,19 @@
+#demo-canvas {
+  height: 200px;
+  margin-top: 20px;
+  visibility: hidden;
+}
+
+#demo-canvas.affix {
+  top: 300px;
+  visibility: visible;
+}
+
+@media (max-width: 767px) {
+  #demo-canvas {
+    display: none;
+  }
+  .demo-button {
+    display: none;
+  }
+}

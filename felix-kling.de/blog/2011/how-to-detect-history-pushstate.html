@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="How to detect when HTML5's history.pushState() is called?" />
+<meta name="dcterms.date" content="2011-01-06 00:00:00 +0100" />
+<title>How to detect when HTML5's history.pushState() is called?</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2011-01-06 00:00:00 +0100">January 06, 2011</time>
+<h1>How to detect when HTML5's history.pushState() is called?</h1>
+<p>That was the question I had and
+<a href="http://stackoverflow.com/users/378024/galambalazs">galambalazs</a> helped me to
+solve this question on
+<a href="http://stackoverflow.com/questions/4570093/how-to-get-notified-about-changes-of-the-history-via-history-pushstate">stackoverflow.com</a>.</p>
+<h2 id="problem-description-and-background">
+Problem description and background <a href="how-to-detect-history-pushstate.html#problem-description-and-background">#</a>
+</h2>
+<p>The latest version of my Firefox add-on (<a href="http://www.floatnotes.org">FloatNotes</a>),
+also listens to the event <code class="language-plaintext highlighter-rouge">hashchange</code>, which is raised when the
+<a href="https://en.wikipedia.org/wiki/Fragment_identifier">fragment-identifier</a> of
+the <a href="https://en.wikipedia.org/wiki/Url">URL</a> is changed. As you may know, this
+technique is used in Ajax-enabled websites (like Google Mail) to make URLs be
+part of the browsing history without reloading the page. So the idea is that if
+the hash has changed, the user actually visits another page.</p>
+<p>Now, with HTML5, the <a href="http://www.w3.org/TR/html5/history.html#the-history-interface"><code class="language-plaintext highlighter-rouge">window.history</code></a>
+object gets new methods which take the previous mentioned idea further:
+<code class="language-plaintext highlighter-rouge">pushState</code> and <code class="language-plaintext highlighter-rouge">replaceState</code>. As the name suggests, <code class="language-plaintext highlighter-rouge">pushState</code> adds a new
+URL to existing history stack and (if the protocol and host stay the same)
+<strong>does not trigger a reload of the page</strong>. Most browsers will display the new
+URL in the address bar too so it really looks like you clicked a normal link,
+but the content is loaded via Ajax. You can test this using Firefox 4 or
+Chrome 8 and Facebook.</p>
+<p>The problem is that calling <code class="language-plaintext highlighter-rouge">pushState</code> does generate any event (like changing
+the hash did) so loading of new content cannot be detected anymore.</p>
+<h2 id="the-solution">
+The solution <a href="how-to-detect-history-pushstate.html#the-solution">#</a>
+</h2>
+<p>I first tried to replace the whole history object with a custom object, but
+that did not work (probably <code class="language-plaintext highlighter-rouge">window.history</code> is readonly).
+Then <a href="http://stackoverflow.com/users/378024/galambalazs">galambalazs</a> proposed
+to just replace the <code class="language-plaintext highlighter-rouge">pushState</code> method. Here is his code:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">history</span><span class="p">){</span>
+    <span class="kd">var</span> <span class="nx">pushState</span> <span class="o">=</span> <span class="nx">history</span><span class="p">.</span><span class="nx">pushState</span><span class="p">;</span>
+    <span class="nx">history</span><span class="p">.</span><span class="nx">pushState</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">state</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">history</span><span class="p">.</span><span class="nx">onpushstate</span> <span class="o">==</span> <span class="dl">"</span><span class="s2">function</span><span class="dl">"</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">history</span><span class="p">.</span><span class="nx">onpushstate</span><span class="p">({</span><span class="na">state</span><span class="p">:</span> <span class="nx">state</span><span class="p">});</span>
+        <span class="p">}</span>
+        <span class="c1">// ... whatever else you want to do</span>
+        <span class="c1">// maybe call onhashchange e.handler</span>
+        <span class="k">return</span> <span class="nx">pushState</span><span class="p">.</span><span class="nx">apply</span><span class="p">(</span><span class="nx">history</span><span class="p">,</span> <span class="nx">arguments</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">})(</span><span class="nb">window</span><span class="p">.</span><span class="nx">history</span><span class="p">);</span>
+</code></pre></div></div>
+<p>So whenever the <code class="language-plaintext highlighter-rouge">pushState</code> method is called, you can trigger your own event
+handler.</p>
+<p>It is a hack, but until an event is raised by default, this seems to be the
+only way to get notified when <code class="language-plaintext highlighter-rouge">history.pushState()</code> is called.</p>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="../2010/mobile-year-in-review-2010.html">&larr; Mobile Year in Review 2010</a>
+<a style="float: right" href="javascript-about-loops-functions-closures.html">JavaScript: About loops, functions and closures &rarr;</a>
+</p>
+</footer>
+</body>
+</html>

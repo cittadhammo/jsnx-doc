@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="Automatically switch color schemes in i3, kitty, neovim and GTK applications" />
+<meta name="dcterms.date" content="2021-08-22 00:00:00 +0200" />
+<title>Automatically switch color schemes in i3, kitty, neovim and GTK applications</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2021-08-22 00:00:00 +0200">August 22, 2021</time>
+<h1>Automatically switch color schemes in i3, kitty, neovim and GTK applications</h1>
+<p>I&#8217;ve been using a light theme
+(<a href="https://ethanschoonover.com/solarized/">Solarized</a>) for the last couple of years and I
+think it works great during the day. But I found it to be too intense for the
+evening or night.</p>
+<p>I made an attempt to implement a &#8220;dark mode toggle&#8221; a while ago, but because I
+couldn&#8217;t automate the switch for every application, I didn&#8217;t really use it. I
+recently switched from from <code class="language-plaintext highlighter-rouge">urxvt</code> to <code class="language-plaintext highlighter-rouge">kitty</code> as my terminal emulator and from <code class="language-plaintext highlighter-rouge">vim</code>
+to <code class="language-plaintext highlighter-rouge">neovim</code> and wanted to give it another try. This post describes the result of
+this effort (spoiler: everything is automated now :) ).</p>
+<figure>
+<a href="../../images/darkmode-toggle-light@original.png">
+<img alt="Desktop with Solarized Light" src="../../images/darkmode-toggle-light.png" srcset="../../images/darkmode-toggle-light.png 610w,
+            ../../images/darkmode-toggle-light@2x.pngg 1220w" />
+</a>
+<a href="../../images/darkmode-toggle-dark@original.png">
+<img alt="Desktop with Solarized Dark" src="../../images/darkmode-toggle-dark.png" srcset="../../images/darkmode-toggle-dark.png 610w,
+            ../../images/darkmode-toggle-dark@2x.pngg 1220w" />
+</a>
+<figcaption>Desktop with Solarized Light and Dark</figcaption>
+</figure>
+<h2 id="final-script">
+Final Script <a href="linux-toggle-dark-mode.html#final-script">#</a>
+</h2>
+<p>This is the script I&#8217;m currently using and will explain in the following
+sections:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/sh</span>
+
+<span class="c"># Determine mode</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="si">$(</span><span class="nb">readlink</span> ~/.Xresources.colors<span class="si">)</span><span class="s2">"</span> <span class="o">=</span> <span class="s2">".Xresources.solarized.light"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+  </span><span class="nv">next_background</span><span class="o">=</span>dark
+<span class="k">else
+  </span><span class="nv">next_background</span><span class="o">=</span>light
+<span class="k">fi</span>
+
+<span class="c"># A specific mode (light/dark) can be forced from the command line</span>
+<span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="o">!=</span> <span class="s2">"</span><span class="nv">$next_background</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+  <span class="c"># This is not that intuitive but if the requested mode is different from the</span>
+  <span class="c"># next mode then the _current_ mode is the same as the requested one and there</span>
+  <span class="c"># is nothing to do</span>
+  <span class="nb">exit </span>0
+<span class="k">fi</span>
+
+<span class="c"># Update color files</span>
+<span class="c"># i3 and other applications that use X resources. The symlink is used to load</span>
+<span class="c"># the correct color scheme on startup (.Xresources includes .Xresources.colors</span>
+<span class="c"># via #include .Xresources.colors)</span>
+<span class="nb">ln</span> <span class="nt">-sf</span> <span class="s2">".Xresources.solarized.</span><span class="nv">$background</span><span class="s2">"</span> ~/.Xresources.colors
+<span class="c"># Overwrite color configuration</span>
+xrdb <span class="nt">-merge</span> ~/.Xresources.colors
+<span class="c"># Vim</span>
+<span class="nb">echo</span> <span class="s2">"set background=</span><span class="nv">$background</span><span class="s2">"</span> <span class="o">&gt;</span> ~/.vimrc.color
+<span class="c"># Rofi</span>
+<span class="nb">echo</span> <span class="s2">"solarized-</span><span class="nv">$background</span><span class="s2">"</span> <span class="o">&gt;</span> ~/.config/rofi/theme
+<span class="c"># For triggering dark themes in GTK apps. Requires `gnome-themes-extra` to be</span>
+<span class="c"># installed (for adwaita-dark). This is primarily for Firefox</span>
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$background</span> <span class="o">=</span> dark <span class="o">]</span><span class="p">;</span> <span class="k">then
+  </span><span class="nb">sed</span> <span class="nt">-i</span> s/Adwaita/Adwaita-dark/ ~/.xsettingsd
+<span class="k">else
+  </span><span class="nb">sed</span> <span class="nt">-i</span> s/Adwaita-dark/Adwaita/ ~/.xsettingsd
+<span class="k">fi</span>
+
+
+<span class="c"># Reload</span>
+<span class="c"># Update WM background</span>
+xsetroot <span class="nt">-solid</span> <span class="s2">"</span><span class="si">$(</span>xrdb <span class="nt">-query</span> | <span class="nb">grep</span> <span class="s1">'background'</span> | <span class="nb">head</span> <span class="nt">-n1</span> | <span class="nb">cut</span> <span class="nt">-f</span> 2<span class="si">)</span><span class="s2">"</span>
+<span class="c"># Update Gtk apps</span>
+killall <span class="nt">-HUP</span> xsettingsd
+<span class="c"># Update i3</span>
+i3-msg reload
+<span class="c"># Update terminal emulator</span>
+kitty +kitten themes <span class="nt">--reload-in</span><span class="o">=</span>all <span class="s2">"Solarized </span><span class="si">$(</span><span class="nb">echo</span> <span class="nv">$background</span> | <span class="nb">sed</span> <span class="s1">'s/./\U&amp;/'</span><span class="si">)</span><span class="s2">"</span>
+<span class="c"># Vim watches ~/.vimrc.color and reloads itself</span>
+</code></pre></div></div>
+<p>The script shows that there are two parts to the problem: Updating color
+configuration files and signaling applications to reload those files. For better
+or worse, the exact steps necessary differ from application to application.</p>
+<p>To toggle the color scheme I also need to know which scheme is currently used.
+There are multiple ways to do this (e.g. inspecting one of the color
+configuration files). I decided to check which file <code class="language-plaintext highlighter-rouge">.Xresources.color</code> links
+to.</p>
+<h2 id="kittys-built-in-solution-easy">
+Kitty&#8217;s built-in solution (easy) <a href="linux-toggle-dark-mode.html#kittys-built-in-solution-easy">#</a>
+</h2>
+<p>Since v0.23 (2021-08-16) <a href="https://sw.kovidgoyal.net/kitty/">kitty</a> has built-in
+support for themes and most importantly: It is able to update the color scheme
+in all running instances. There are no color files to update, kitty does that
+automatically for you. All you have to do is run the following command:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kitty +kitten themes <span class="nt">--reload-in</span><span class="o">=</span>all &lt;color scheme&gt;
+</code></pre></div></div>
+<p>(NOTE: You can create your own color schemes or overwrite existing ones by
+storing them in <code class="language-plaintext highlighter-rouge">~/.config/kitty/themes/</code>).</p>
+<h2 id="rofi-also-easy">
+rofi (also easy) <a href="linux-toggle-dark-mode.html#rofi-also-easy">#</a>
+</h2>
+<p>Because <a href="https://github.com/davatorium/rofi"><code class="language-plaintext highlighter-rouge">rofi</code></a> is run on demand, we don&#8217;t
+have to signal the application. We only have to tell rofi which color
+scheme to use, which is done via the <code class="language-plaintext highlighter-rouge">--theme</code> argument.<br/>
+I have two configuration files for the different color schemes in
+<code class="language-plaintext highlighter-rouge">~/.config/rofi/</code>. The <em>name</em> of the file is stored in <code class="language-plaintext highlighter-rouge">~/.config/rofi/theme</code>,
+which is updated by the toggle script:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">echo</span> <span class="s2">"solarized-</span><span class="nv">$background</span><span class="s2">"</span> <span class="o">&gt;</span> ~/.config/rofi/theme
+</code></pre></div></div>
+<p>Rofi is started via an <a href="https://i3.org/">i3</a> keybinding:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>bindsym Mod1+space exec rofi -theme $(cat ~/.config/rofi/theme) ...
+</code></pre></div></div>
+<h2 id="i3-and-other-apps-that-use-xresources">
+i3 (and other apps that use Xresources) <a href="linux-toggle-dark-mode.html#i3-and-other-apps-that-use-xresources">#</a>
+</h2>
+<p>I&#8217;m trying to reduce complexity as much as possible, which in this case means to
+reduce the number of places where color information is stored. Because I used to
+use <a href="https://wiki.archlinux.org/title/Rxvt-unicode"><code class="language-plaintext highlighter-rouge">urxvt</code></a>, using X resources
+was the way to go.</p>
+<p>As you can see in the script, I have two color configuration files
+(<code class="language-plaintext highlighter-rouge">.Xresources.solarized.*</code>), which contain settings in the form of</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>*background:            ...
+*background-highlight:  ...
+</code></pre></div></div>
+<p>The <code class="language-plaintext highlighter-rouge">*</code> at the beginning allows the setting to be loaded/queried with any prefix
+(usually applications use the their name as prefix).</p>
+<p>The color information can be updated directly with <code class="language-plaintext highlighter-rouge">xrdb -merge
+.Xresources.solarized....</code>, but in order to load the correct color scheme on
+startup, <code class="language-plaintext highlighter-rouge">.Xresources.colors</code> links to one of them and <code class="language-plaintext highlighter-rouge">.Xresources</code> includes
+<code class="language-plaintext highlighter-rouge">.Xresources.colors</code> via</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#include '.Xresources.colors'
+</code></pre></div></div>
+<p>For <code class="language-plaintext highlighter-rouge">#include</code> to work you need to have a pre-processor installed, such as <code class="language-plaintext highlighter-rouge">cpp</code>.</p>
+<p>Unlike <code class="language-plaintext highlighter-rouge">urxvt</code>, <a href="https://i3.org/">i3</a> does not use X resources by default
+but provides a way to <a href="https://i3.org/docs/userguide.html#xresources">query it</a>
+in the configuration file:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>set_from_resource $background i3.background
+set_from_resource $background-h i3.background-highlight
+set_from_resource $black i3.color0
+...
+client.focused          $background-h $background-h $foreground $red $cyan
+...
+</code></pre></div></div>
+<p>After updating the symlink and updating the X resources database with <code class="language-plaintext highlighter-rouge">xrdb</code>,
+i3 can be signaled to reload its configuration file with <code class="language-plaintext highlighter-rouge">i3-msg</code>:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>i3-msg reload
+</code></pre></div></div>
+<h2 id="gtk-applications-firefox-">
+GTK applications (Firefox, &#8230;) <a href="linux-toggle-dark-mode.html#gtk-applications-firefox-">#</a>
+</h2>
+<p>This took me the longest to get to work. GTK can be <a href="https://unix.stackexchange.com/questions/14129/gtk-enable-set-dark-theme-on-a-per-application-basis">configured to use a
+dark theme or tell applications to perfer a dark
+theme</a>:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># ~/.config/gtk-3.0/settings.ini
+[Settings]
+gtk-application-prefer-dark-theme=true
+</code></pre></div></div>
+<p>but changing these settings doesn&#8217;t cause applications to update at runtime.</p>
+<p>The solution to that problem is to use
+<a href="https://wiki.archlinux.org/title/Xsettingsd"><code class="language-plaintext highlighter-rouge">Xsettingsd</code></a> for configuration
+instead. It&#8217;s a substitute for the Gnome settings daemon. When applications
+get their settings from the daemon they can be signaled to update those
+settings.
+However, not all settings can be set this way. E.g. I couldn&#8217;t get the
+aforementioned <code class="language-plaintext highlighter-rouge">gtk-application-prefer-dark-theme</code> setting to work. What did
+work however was switching between a dark and light theme via</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># ~/.xsettingsd
+
+Net/ThemeName "Adwaita"
+# Net/ThemeName "Adwaita-dark"
+</code></pre></div></div>
+<p>But for this to work, the dark theme also needs to be installed, which on Arch
+Linux is part of the
+<a href="https://archlinux.org/packages/extra/x86_64/gnome-themes-extra/"><code class="language-plaintext highlighter-rouge">gnome-themes-extra</code></a>
+package (I didn&#8217;t have this package and didn&#8217;t understand why it didn&#8217;t work).</p>
+<p>The following settings did <strong>not</strong> work (note that I don&#8217;t know the difference
+between the <code class="language-plaintext highlighter-rouge">Net</code> and the <code class="language-plaintext highlighter-rouge">Gtk</code> prefix so I tried all of them):</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># ~/.xsettingsd
+
+Net/ApplicationPreferDarkTheme 1
+Gtk/ApplicationPreferDarkTheme 1
+# Appending the theme variant doesn't work via xsettingsd but it worked in
+# settings.ini, even without the dark theme installed
+Net/ThemeName "Adwaita:dark"
+Gtk/ThemeName "Adwaita:dark"
+</code></pre></div></div>
+<p>To update <code class="language-plaintext highlighter-rouge">.xsettingsd</code> I&#8217;m using simple <code class="language-plaintext highlighter-rouge">sed</code> commands:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="o">[</span> <span class="nv">$background</span> <span class="o">=</span> dark <span class="o">]</span><span class="p">;</span> <span class="k">then
+  </span><span class="nb">sed</span> <span class="nt">-i</span> s/Adwaita/Adwaita-dark/ ~/.xsettingsd
+<span class="k">else
+  </span><span class="nb">sed</span> <span class="nt">-i</span> s/Adwaita-dark/Adwaita/ ~/.xsettingsd
+<span class="k">fi</span>
+</code></pre></div></div>
+<p>The xsettings daemon is informed about changes via the <code class="language-plaintext highlighter-rouge">HUP</code> signal:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>killall <span class="nt">-HUP</span> xsettingsd
+</code></pre></div></div>
+<p>This should update running GTK applications, but I have only tested it with
+Firefox and gnucash.</p>
+<h2 id="neovim">
+Neovim <a href="linux-toggle-dark-mode.html#neovim">#</a>
+</h2>
+<p>The color scheme I&#8217;m using
+(<a href="https://github.com/lifepillar/vim-solarized8">vim-solarized8</a>) determines
+which theme (light/dark) to use based on the value of the <code class="language-plaintext highlighter-rouge">background</code> settings.</p>
+<p>To make things easier to update, I&#8217;m setting the this option in a separate
+file:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">echo</span> <span class="s2">"set background=</span><span class="nv">$background</span><span class="s2">"</span> <span class="o">&gt;</span> ~/.vimrc.color
+</code></pre></div></div>
+<p>This file is loaded in my vim setup. And ideally vim would reload it every time
+this file changes.<br/>
+Luckily neovim provides an API to do just that, including an example (<a href="https://neovim.io/doc/user/lua.html"><code class="language-plaintext highlighter-rouge">:help
+watch-file</code></a>).</p>
+<p>I created a Lua module which sets up the file watcher (following the example) to
+source <code class="language-plaintext highlighter-rouge">.vimrc.color</code> whenever it changes:</p>
+<div class="language-lua highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">local</span> <span class="n">colorFile</span> <span class="o">=</span> <span class="n">vim</span><span class="p">.</span><span class="n">fn</span><span class="p">.</span><span class="n">expand</span><span class="p">(</span><span class="s1">'~/.vimrc.color'</span><span class="p">)</span>
+<span class="kd">local</span> <span class="k">function</span> <span class="nf">reload</span><span class="p">()</span> 
+	<span class="n">vim</span><span class="p">.</span><span class="n">cmd</span><span class="p">(</span><span class="s2">"source "</span><span class="o">..</span> <span class="n">colorFile</span><span class="p">)</span>
+<span class="k">end</span>
+
+<span class="kd">local</span> <span class="n">w</span> <span class="o">=</span> <span class="n">vim</span><span class="p">.</span><span class="n">loop</span><span class="p">.</span><span class="n">new_fs_event</span><span class="p">()</span>
+<span class="kd">local</span> <span class="n">on_change</span>
+<span class="kd">local</span> <span class="k">function</span> <span class="nf">watch_file</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+	<span class="n">w</span><span class="p">:</span><span class="n">start</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="p">{},</span> <span class="n">vim</span><span class="p">.</span><span class="n">schedule_wrap</span><span class="p">(</span><span class="n">on_change</span><span class="p">))</span>
+<span class="k">end</span>
+<span class="n">on_change</span> <span class="o">=</span> <span class="k">function</span><span class="p">()</span>
+	<span class="n">reload</span><span class="p">()</span>
+	<span class="c1">-- Debounce: stop/start.</span>
+	<span class="n">w</span><span class="p">:</span><span class="n">stop</span><span class="p">()</span>
+	<span class="n">watch_file</span><span class="p">(</span><span class="n">colorFile</span><span class="p">)</span>
+<span class="k">end</span>
+
+<span class="c1">-- reload vim config when background changes</span>
+<span class="n">watch_file</span><span class="p">(</span><span class="n">colorFile</span><span class="p">)</span>
+<span class="n">reload</span><span class="p">()</span>
+
+<span class="n">vim</span><span class="p">.</span><span class="n">opt</span><span class="p">.</span><span class="n">termguicolors</span> <span class="o">=</span> <span class="kc">true</span>
+<span class="n">vim</span><span class="p">.</span><span class="n">cmd</span><span class="p">(</span><span class="s2">"colorscheme solarized8"</span><span class="p">)</span>
+</code></pre></div></div>
+<h2 id="wrapping-up">
+Wrapping up <a href="linux-toggle-dark-mode.html#wrapping-up">#</a>
+</h2>
+<p>I associated the script with a keyboard shortcut in i3:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>bindsym Mod1+F3 exec ~/bin/togglecolors.sh
+</code></pre></div></div>
+<p>and I setup systemd timers to automatically switch between light and dark mode at
+the beginning and the end of the day. The service unit is straightforward it
+just runs the script with the provided parameter (making use of service
+instances):</p>
+<div class="language-systemd highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># ~/.config/systemd/user/<a href="../../cdn-cgi/l/email-protection.html" class="__cf_email__" data-cfemail="ec8f8380839e9f8f84898189acc29f899e9a858f89">[email&#160;protected]</a></span>
+<span class="k">[Unit]</span>
+<span class="nt">Description</span><span class="p">=</span>Update colorschme
+
+<span class="k">[Service]</span>
+<span class="nt">ExecStart</span><span class="p">=</span>%h/bin/togglecolors.sh %I
+</code></pre></div></div>
+<p>with the timer units being:</p>
+<div class="language-systemd highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># ~/.config/systemd/user/lightmode.timer</span>
+<span class="k">[Unit]</span>
+<span class="nt">Description</span><span class="p">=</span>Switch to light mode
+
+<span class="k">[Timer]</span>
+<span class="nt">OnCalendar</span><span class="p">=</span>Mon..Sun 8:00
+<span class="nt">Persistent</span><span class="p">=</span>true
+<span class="nt">Unit</span><span class="p">=</span><a href="../../cdn-cgi/l/email-protection.html" class="__cf_email__" data-cfemail="9dfef2f1f2efeefef5f8f0f8ddf1f4faf5e9b3eef8efebf4fef8">[email&#160;protected]</a>
+
+<span class="k">[Install]</span>
+<span class="nt">WantedBy</span><span class="p">=</span>timers.target
+</code></pre></div></div>
+<div class="language-systemd highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># ~/.config/systemd/user/darkmode.timer</span>
+<span class="k">[Unit]</span>
+<span class="nt">Description</span><span class="p">=</span>Switch to dark mode
+
+<span class="k">[Timer]</span>
+<span class="nt">OnCalendar</span><span class="p">=</span>Mon..Sun 20:00
+<span class="nt">Persistent</span><span class="p">=</span>true
+<span class="nt">Unit</span><span class="p">=</span><a href="../../cdn-cgi/l/email-protection.html" class="__cf_email__" data-cfemail="1675797a796465757e737b73567277647d38657364607f7573">[email&#160;protected]</a>
+
+<span class="k">[Install]</span>
+<span class="nt">WantedBy</span><span class="p">=</span>timers.target
+</code></pre></div></div>
+<p>An interesting improvement to this would be to make the timers relative to the
+local sunrise and sunset times.</p>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="../2020/custom-github-pages-redirect.html">&larr; Custom GitHub pages redirect with nginx</a>
+</p>
+</footer>
+<script data-cfasync="false" src="../../cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+</html>

@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="Sonos speakers on a dedicated subnet/VLAN" />
+<meta name="dcterms.date" content="2019-02-21 00:00:00 +0100" />
+<title>Sonos speakers on a dedicated subnet/VLAN</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2019-02-21 00:00:00 +0100">February 21, 2019</time>
+<h1>Sonos speakers on a dedicated subnet/VLAN</h1>
+<p>There are many reasons why one might want to have a <a href="https://www.sonos.com/">Sonos</a> speaker on a
+different subnet than the controller.<br/>
+<a href="https://en.community.sonos.com/setting-up-sonos-228990/sonos-on-different-subnets-29177">People</a>
+<a href="https://en.community.sonos.com/home-theater-228993/sonos-across-multiple-ip-subnets-4996373">have</a>
+<a href="https://community.ubnt.com/t5/UniFi-Routing-Switching/Configure-Sonos-across-subnets-on-USG/td-p/1979899">asked</a>
+<a href="https://www.reddit.com/r/sonos/comments/92ydtt/advanced_networking_connecting_to_my_sonos_on_a/">about</a>
+this before, but the answers are either wrong (&#8220;it&#8217;s not possible&#8221;), buried in
+the thread or lack detail.</p>
+<p>Here I&#8217;m providing more detail and will explain</p>
+<ul>
+<li>how Sonos communicates over UPnP, which tells us which ports need to be open
+on a firewall</li>
+<li>how IP multicast works, which allows us to discover Sonos speakers across
+subnets</li>
+</ul>
+<p><strong>Disclaimer:</strong> I have only tested with an already configured Sonos system. I
+have not tested yet which configuration is necessary to add a new speaker
+directly on the other subnet.</p>
+<p>In the following examples, host <strong>192.168.0.5</strong> is running the Sonos controller
+software, host <strong>192.168.1.10</strong> is a speaker.</p>
+<h2 id="upnp-and-ssdp">
+UPnP and SSDP <a href="sonos-dedicated-vlan.html#upnp-and-ssdp">#</a>
+</h2>
+<p>Sonos uses <a href="https://en.wikipedia.org/wiki/Universal_Plug_and_Play"><strong>Universal Plug and Play (UPnP)</strong></a> to announce and find
+speakers. UPnP defines protocols for devices to communicate with each other
+without prior configuration. It groups the protocols into a series of steps.<br/>
+The steps interesting to us are:</p>
+<ul>
+<li>Step 1: Discovery</li>
+<li>Step 2: Description</li>
+<li>Step 4: Eventing</li>
+</ul>
+<p>Looking at the messages exchanged between controller and speakers related to
+these steps will let us know which <strong>ports</strong> need to be configured on our
+firewall.</p>
+<h3 id="step-1-discovery">
+Step 1: Discovery <a href="sonos-dedicated-vlan.html#step-1-discovery">#</a>
+</h3>
+<p>The UPnP specification describes this step as</p>
+<blockquote>
+<p>When a device is added to the network, the UPnP discovery protocol allows
+that device to advertise its services to control points on the
+network. Similarly, when a control point is added to the network, the
+UPnP discovery protocol allows that control point to search for devices
+of interest on the network.
+[&#8230;]</p>
+</blockquote>
+<p>This step is performed by the <a href="https://en.wikipedia.org/wiki/Simple_Service_Discovery_Protocol"><strong>Simple Service Discovery Protocol
+(SSDP)</strong></a>. For our purposes we only need to look at the packages sent by
+a control device.</p>
+<p>The controller periodically sends the same search request to find speakers to
+two addresses:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ tcpdump -n -# -c 6 -t -r sonos.pcapng "port 1900"
+    1  IP 192.168.0.5.1901 &gt; 239.255.255.250.1900: UDP, length 275
+    2  IP 192.168.0.5.1901 &gt; 255.255.255.255.1900: UDP, length 275
+    3  IP 192.168.0.5.1901 &gt; 255.255.255.255.1900: UDP, length 248
+    4  IP 192.168.0.5.1901 &gt; 239.255.255.250.1900: UDP, length 248
+    5  IP 192.168.0.5.1901 &gt; 239.255.255.250.1900: UDP, length 275
+    6  IP 192.168.0.5.1901 &gt; 255.255.255.255.1900: UDP, length 275
+    7  IP 192.168.1.10.54038 &gt; 192.168.0.5.1901: UDP, length 496
+    ...
+</code></pre></div></div>
+<p><code class="language-plaintext highlighter-rouge">255.255.255.250</code> is the local broadcast address, which is not routable, so
+that doesn&#8217;t help us. <code class="language-plaintext highlighter-rouge">239.255.255.250</code> is more interesting for us: It&#8217;s the
+<strong>IP multicast address</strong> reserved for SSDP, which can be routed. I will explain
+IP multicast in the next section.</p>
+<p>For now we know that packets to <strong>address <code class="language-plaintext highlighter-rouge">239.255.255.250</code></strong> (or to <strong>port
+1900</strong>) and packets from speakers to controllers to <strong>port 1901</strong> must be
+allowed to pass the Firewall.</p>
+<p>SSDP messages use the same format as HTTP 1.1 header fields. When a controller
+app starts, it sends the following message (<code class="language-plaintext highlighter-rouge">...</code> represents removed
+potentially sensitive information):</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>M-SEARCH * HTTP/1.1
+HOST: 239.255.255.250:1900
+MAN: "ssdp:discover"
+MX: 1
+ST: urn:schemas-upnp-org:device:ZonePlayer:1
+USER-AGENT: Linux UPnP/1.0 Sonos/47.2-59120 (...)
+X-SONOS-DEVICEID: ...
+X-SONOS-SESSIONSECONDS: 0
+X-SONOS-MDPMODEL: 4
+</code></pre></div></div>
+<p>This requests consists mostly of standard UPnP fields. The <code class="language-plaintext highlighter-rouge">ST: urn:schemas-upnp-org:device:ZonePlayer:1</code> indicates that the controller is
+looking for <code class="language-plaintext highlighter-rouge">ZonePlayer</code> (Sonos) devices.</p>
+<p>An example of a speaker&#8217;s response is</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>HTTP/1.1 200 OK
+CACHE-CONTROL: max-age = 1800
+EXT:
+LOCATION: http://192.168.1.10:1400/xml/device_description.xml
+SERVER: Linux UPnP/1.0 Sonos/47.2-59120 (ZPS9)
+ST: urn:schemas-upnp-org:device:ZonePlayer:1
+USN: uuid:RINCON_...::urn:schemas-upnp-org:device:ZonePlayer:1
+X-RINCON-HOUSEHOLD: ...
+X-RINCON-BOOTSEQ: 95
+X-RINCON-WIFIMODE: 0
+X-RINCON-VARIANT: 0
+HOUSEHOLD.SMARTSPEAKER.AUDIO: ...
+</code></pre></div></div>
+<p>which brings us to the next step.</p>
+<h3 id="step-2-description">
+Step 2: Description <a href="sonos-dedicated-vlan.html#step-2-description">#</a>
+</h3>
+<p>The UPnP specification describes this step as</p>
+<blockquote>
+<p>After a control point has discovered a device, the control point
+still knows very little about the device. For the control point to learn
+more about the device and its capabilities, or to interact with the device,
+the control point shall retrieve the device&#8217;s description from the URL<br/>
+provided by the device in the discovery message.
+[&#8230;]</p>
+</blockquote>
+<p>This URL is the value of the <code class="language-plaintext highlighter-rouge">LOCATION</code> field in the response:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>LOCATION: http://192.168.1.10:1400/xml/device_description.xml
+</code></pre></div></div>
+<p>This means controllers must be able to access <strong>port 1400</strong> on speakers to
+learn more about their capabilities.</p>
+<h3 id="step-4-eventing">
+Step 4: Eventing <a href="sonos-dedicated-vlan.html#step-4-eventing">#</a>
+</h3>
+<p>The UPnP specification describes this step as:</p>
+<blockquote>
+<p>A UPnP description for a service includes a list of actions the
+service responds to and a list of variables that model the state of
+the service at run time. The service publishes updates when these
+variables change, and a control point may subscribe to receive this
+information.
+[&#8230;]</p>
+</blockquote>
+<p>To subscribe to a service, a controller sends a <code class="language-plaintext highlighter-rouge">SUBSCRIBE</code> HTTP request to the
+URL found in the speaker&#8217;s device description. For example, if the device
+description contains</p>
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;service&gt;</span>
+  <span class="nt">&lt;serviceType&gt;</span>
+    urn:schemas-upnp-org:service:MusicServices:1
+  <span class="nt">&lt;/serviceType&gt;</span>
+  <span class="nt">&lt;serviceId&gt;</span>
+    urn:upnp-org:serviceId:MusicServices
+  <span class="nt">&lt;/serviceId&gt;</span>
+  <span class="nt">&lt;controlURL&gt;</span>
+    /MusicServices/Control
+  <span class="nt">&lt;/controlURL&gt;</span>
+  <span class="nt">&lt;eventSubURL&gt;</span>
+    /MusicServices/Event
+  <span class="nt">&lt;/eventSubURL&gt;</span>
+  <span class="nt">&lt;SCPDURL&gt;</span>
+    /xml/MusicServices1.xml
+  <span class="nt">&lt;/SCPDURL&gt;</span>
+<span class="nt">&lt;/service&gt;</span>
+</code></pre></div></div>
+<p>the controller will sent a subscribe request that looks like</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>SUBSCRIBE /MusicServices/Event HTTP/1.1
+HOST: 192.168.1.10:1400
+USER-AGENT: Linux UPnP/1.0 Sonos/46.3-57250 ()
+CALLBACK: &lt;http://192.168.0.5:3400/notify&gt;
+NT: upnp:event
+TIMEOUT: Second-3600
+</code></pre></div></div>
+<p>This tells the speaker that whenever a related event happens, it should send a
+<code class="language-plaintext highlighter-rouge">NOTIFY</code> request to <strong>http://192.168.0.5:3400/notify</strong>.</p>
+<p>Thus, we need to allow speakers to access <strong>port 3400</strong> on every controllers.</p>
+<p><strong>NOTE:</strong> The port number is different for different platforms. The iOS app
+listens on port <strong>3401</strong>, the Android app listens on port <strong>3500</strong>.</p>
+<h2 id="ip-multicast">
+IP multicast <a href="sonos-dedicated-vlan.html#ip-multicast">#</a>
+</h2>
+<p>IP multicast is a way to send a single data stream to multiple destinations
+(1:n). This is opposed to unicast where the source host sends data to a single
+destination (1:1). It&#8217;s also different from broadcast, which is link-local
+only, i.e. not routable. <a href="https://www.iana.org/assignments/multicast-addresses/multicast-addresses.xhtml">Many IP multicast
+addresses</a><br/>
+are routable in internal networks, including the one used by SSDP (routable
+within &#8220;Organization-Local Scope&#8221;).</p>
+<p>What&#8217;s nice about this is that the server doesn&#8217;t have to know the actual
+destinations for the data stream. Instead, the clients are telling a
+<strong>multicast-aware router</strong> that they are interested in data for a specific
+address. Clients that should be reachable by a specific address form a
+<strong>multicast group</strong>. When the router receives multicast data, it forwards (and
+duplicates, if necessary) the data to the clients it knows about.</p>
+<p>How does a client tell a router which multicast group it is interested in? With
+IGMP.</p>
+<h3 id="internet-group-management-protocol-igmp">
+Internet Group Management Protocol (IGMP) <a href="sonos-dedicated-vlan.html#internet-group-management-protocol-igmp">#</a>
+</h3>
+<p><a href="https://en.wikipedia.org/wiki/Internet_Group_Management_Protocol">IGMP</a> is the protocol for managing multicast group &#8220;subscriptions&#8221;. It runs
+on the same level as ICMP.</p>
+<p>When the controller starts, it&#8217;s sends a <strong>membership report</strong>:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>tcpdump <span class="nt">-n</span> -# <span class="nt">-r</span> sonos.pcapng <span class="s2">"igmp"</span>
+    ...
+    3  IP 192.168.0.5 <span class="o">&gt;</span> 239.255.255.250: igmp v2 report 239.255.255.250
+    ...
+</code></pre></div></div>
+<p>When a multicast aware router on the network receives such a packet on a
+specific interface, it remembers that there is a client for this group on that
+interface and will forward all packets addressed to the multicast address to
+that interface.</p>
+<h3 id="igmp-snooping">
+IGMP snooping <a href="sonos-dedicated-vlan.html#igmp-snooping">#</a>
+</h3>
+<p>You may have heard of &#8220;IGMP snooping&#8221;. This is a feature on <strong>switches</strong> to
+only
+send multicast traffic to the ports that have a host of the corresponding group
+connected.</p>
+<p>IGMP snooping generally only works if there is a multicast router running that
+periodically queries the networks for group membership, and thus the switch
+learns about which groups are at which ports.</p>
+<h2 id="final-router-and-firewall-setup">
+Final router and firewall setup <a href="sonos-dedicated-vlan.html#final-router-and-firewall-setup">#</a>
+</h2>
+<p>I&#8217;m using <a href="https://github.com/troglobit/mrouted">mrouted</a> as multicast router, because it is part of OpenBSD&#8217;s base
+install. Another one is <a href="https://github.com/pali/igmpproxy">igmpproxy</a>. My configuration is</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># /etc/mrouted.conf</span>
+
+phyint em1
+phyint vlan20
+phyint vlan30
+phyint vlan40
+phyint vlan50
+
+phyint em0 disable
+</code></pre></div></div>
+<p>which means the daemon is registering IGMP messages on every interface but
+<code class="language-plaintext highlighter-rouge">em0</code>, my WAN interface.</p>
+<p>Just like with normal IP packets, multicast forwarding needs to be explicitly
+enabled in the kernel:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># OpenBSD</span>
+sysctl net.inet.ip.mforwarding<span class="o">=</span>1
+
+<span class="c"># Debian</span>
+sysctl net.ipv4.conf.all.mc_forwarding<span class="o">=</span>1
+</code></pre></div></div>
+<p>The exact setting name will likely differ between OSes. A <code class="language-plaintext highlighter-rouge">grep forward</code> over
+all settings should help.</p>
+<p>As indicated earlier, this alone is not enough. The router&#8217;s firewall also need
+to be configured to allow IGMP, UPnP and Sonos traffic. Sonos actually provides
+a <a href="https://support.sonos.com/s/article/688?language=en_US&amp;utm_medium=firewall&amp;utm_source=cr-care&amp;utm_content=english-cr-care-firewall">list of
+ports</a>
+that it uses, and all the ports we discovered are mentioned there as well.</p>
+<p>These are my rules for <a href="https://man.openbsd.org/pf.conf.5">pf</a>, something similar should be doable with
+<a href="https://www.netfilter.org/projects/iptables/index.html">iptables</a>:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># /etc/pf.conf</span>
+
+<span class="c"># Allow IGMP traffic from speakers and controllers</span>
+pass quick proto igmp from <span class="o">{</span>&lt;sonos_speaker&gt; &lt;sonos_controller&gt;<span class="o">}</span> allow-opts
+
+<span class="c"># Allow discovery requests from speakers and controllers</span>
+pass quick from <span class="o">{</span>&lt;sonos_speaker&gt; &lt;sonos_controller&gt;<span class="o">}</span> to 239.255.255.250
+
+<span class="c"># Allow discovery responses from speakers to controllers. Technically the</span>
+<span class="c"># reverse direction might also be useful, but I haven't found it necessary</span>
+pass quick proto udp from &lt;sonos_speaker&gt; to &lt;sonos_controller&gt; port 1901
+
+<span class="c"># Allow device description requests and responses between speakers and</span>
+<span class="c"># controllers (pf is stateful)</span>
+<span class="c"># Port 4444 is somehow used to monitor the firmware update process</span>
+pass quick proto tcp from &lt;sonos_controller&gt; to &lt;sonos_speaker&gt; port <span class="o">{</span>1400 4444<span class="o">}</span>
+
+<span class="c"># Allow event messages from speakers to controllers</span>
+pass quick proto tcp from &lt;sonos_speaker&gt; to &lt;sonos_controller&gt; port <span class="o">{</span>3400 3401<span class="o">}</span>
+</code></pre></div></div>
+<p><code class="language-plaintext highlighter-rouge">&lt;sonos_speaker&gt;</code> and <code class="language-plaintext highlighter-rouge">&lt;sonos_controller&gt;</code> are pf tables, which are just lists
+of IP addresses. This traffic is only allowed from (and to) devices that are
+Sonos speakers and controllers.</p>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="../2018/ansible-openbsd.html">&larr; How to manage OpenBSD with Ansible</a>
+<a style="float: right" href="javascript-callbacks-misconceptions.html">JavaScript: How (not) to get a value "out of" a callback &rarr;</a>
+</p>
+</footer>
+</body>
+</html>

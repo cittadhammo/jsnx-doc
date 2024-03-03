@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<meta name="author" content="$author-meta$" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@fkling42" />
+<meta name="twitter:title" content="How to manage OpenBSD with Ansible" />
+<meta name="dcterms.date" content="2018-10-22 00:00:00 +0200" />
+<title>How to manage OpenBSD with Ansible</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/highlight.css">
+</head>
+<body>
+<header>
+<h1>Felix Kling</h1>
+<nav>
+<ul><li>
+<a href="../../index.html">About</a>
+</li><li>
+<a href="../index.html">Blog</a>
+</li></ul>
+</nav>
+</header>
+<article class="post">
+<time class="post-publication" datetime="2018-10-22 00:00:00 +0200">October 22, 2018</time>
+<h1>How to manage OpenBSD with Ansible</h1>
+<p><a href="https://www.ansible.com/">Ansible</a> is an open source tool to perform
+application deployment and configuration management. Two of the advantages over
+other tools are:</p>
+<ul>
+<li>No need for a centralized configuration server</li>
+<li>No need for agents on the hosts that need to be managed.</li>
+</ul>
+<p>This makes ansible pretty useful for home-network use.</p>
+<p>While ansible doesn&#8217;t need an agent on the host to be managed, it does need
+Python. OpenBSD doesn&#8217;t ship with Python by default so we need to install it:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>doas pkg_add python-2.7
+</code></pre></div></div>
+<p>The installation process suggests to symlink the installed version to <code class="language-plaintext highlighter-rouge">python</code>,
+but this is not necessary if you only want to use it with ansible.</p>
+<p>Now we only need to tell ansible where to find the Python executable and which
+method to use to become root.
+This can easily be done with inventory variables and host groups. Create an
+<code class="language-plaintext highlighter-rouge">openbsd</code> group, to which all OpenBSD hosts belong to and declare the following
+variables:</p>
+<div class="language-ini highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[openbsd]</span>
+<span class="err">myhost</span>
+
+<span class="nn">[openbsd:vars]</span>
+<span class="py">ansible_python_interpreter</span><span class="p">=</span><span class="s">/usr/local/bin/python2.7</span>
+<span class="py">ansible_become_method</span><span class="p">=</span><span class="s">su</span>
+</code></pre></div></div>
+<p>Ansible also supports <code class="language-plaintext highlighter-rouge">doas</code> as become method, but I couldn&#8217;t get that to work
+properly.</p>
+</article>
+<footer>
+<p class="post-contact">
+Please <a href="../../index.html#contact">contact me</a> if you have questions or found issues in this post.
+</p>
+<p>
+<a href="gnupg-with-mailmate.html">&larr; Plain GnuPG (GPG) with MailMate</a>
+<a style="float: right" href="../2019/sonos-dedicated-vlan.html">Sonos speakers on a dedicated subnet/VLAN &rarr;</a>
+</p>
+</footer>
+</body>
+</html>

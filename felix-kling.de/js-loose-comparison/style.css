@@ -1,0 +1,71 @@
+code {
+  background-color: #f8f8f8;
+  font-size: 0.94em;
+  padding: 0 3px;
+}
+
+input, select, button {
+  font-size: 1.1rem;
+}
+
+input {
+  text-align: center;
+}
+
+.marker {
+  position: absolute;
+  left: -1.2em;
+  font-size: 1.3em;
+}
+
+.result {
+  margin-top: 20px;
+}
+
+.step {
+  color: #333;
+  list-style: none;
+  opacity: 0.6;
+  position: relative;
+}
+
+.step.executed {
+  opacity: 1;
+}
+
+.error {
+  color: red;
+  text-align: center;
+}
+
+.operation {
+  border: 2px solid;
+  padding: 0.5em;
+  text-align: center;
+  font-size: 1.2em;
+  margin-top: .7em;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace !important;
+}
+
+.operation input {
+  border: 1px solid #00000033;
+  min-width: 15em;
+}
+
+.operation.yes {
+  border-color: green;
+}
+
+.operation.no {
+  border-color: red;
+}
+
+.operation.yes input,
+.operation.yes {
+  background-color: #90ee90;
+}
+
+.operation.no input,
+.operation.no {
+  background-color: #ffb6c1;
+}

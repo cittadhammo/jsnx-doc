@@ -1,0 +1,65 @@
+.highlight table td { padding: 5px; }
+.highlight table pre { margin: 0; }
+.highlight, .highlight .w {
+  color: var(--code-color);
+}
+.highlight .c, .highlight .ch, .highlight .cd, .highlight .cm, .highlight .cpf, .highlight .c1, .highlight .cs {
+  font-style: italic;
+}
+.highlight .c {
+  color: var(--code-comment-color);
+}
+.highlight .cp {
+}
+.highlight .k, .highlight .kc, .highlight .kd, .highlight .kn, .highlight .kr, .highlight .kv {
+  font-weight: var(--bold);
+}
+.highlight .kp {
+}
+.highlight .kt {
+}
+.highlight .o, .highlight .ow {
+  font-weight: var(--bold);
+}
+.highlight .nc {
+  font-weight: var(--bold);
+}
+.highlight .nn {
+  font-weight: var(--bold);
+}
+.highlight .ne {
+  font-weight: var(--bold);
+}
+.highlight .ni {
+  font-weight: var(--bold);
+}
+.highlight .nt {
+  font-weight: var(--bold);
+}
+.highlight .s, .highlight .sa, .highlight .sb, .highlight .sc, .highlight .dl, .highlight .sd, .highlight .s2, .highlight .sh, .highlight .sx, .highlight .sr, .highlight .s1, .highlight .ss {
+  font-style: italic;
+}
+.highlight .si {
+  font-weight: var(--bold);
+}
+.highlight .se {
+  font-weight: var(--bold);
+}
+.highlight .gh {
+  font-weight: var(--bold);
+}
+.highlight .gu {
+  font-weight: var(--bold);
+}
+.highlight .ge {
+  font-style: italic;
+}
+.highlight .gs {
+  font-weight: var(--bold);
+}
+.highlight .gp {
+  font-weight: var(--bold);
+}
+.highlight .err {
+  color: #FF0000;
+}
